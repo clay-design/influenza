@@ -12,6 +12,7 @@
         </span>
     </div>
     <form id="screeningForm" autocomplete="off">
+        <!-- All fields (same as before) – no changes needed here -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Facility</label>
@@ -239,8 +240,8 @@
         }).fail(function() { alert('Server error – cannot generate ID.'); });
     }
 
-    function clearScreeningForm() {
-        if (!confirm('Clear all data? This will reset the form completely.')) return;
+    // ----- NEW: silent reset – no prompts -----
+    function resetScreeningForm() {
         $('#screeningForm')[0].reset();
         $('#screening_id').val('');
         $('#age_years').val('');
@@ -255,13 +256,21 @@
         localStorage.removeItem('cached_height');
         localStorage.removeItem('cached_screening_id');
         setEditMode(false);
+    }
+
+    // ----- Clear button with confirm + alert -----
+    function clearScreeningForm() {
+        if (!confirm('Clear all data? This will reset the form completely.')) {
+            return;
+        }
+        resetScreeningForm();
         alert('Form cleared.');
     }
 
     function loadScreeningData() {
         var activeId = localStorage.getItem('cached_screening_id');
         if (!activeId) {
-            clearScreeningForm();
+            resetScreeningForm();   // silent – no popup
             return;
         }
         $.getJSON('/api/lookup/screening/' + activeId, function(res) {
@@ -269,6 +278,7 @@
                 var d = res.data;
                 $('#facility').val(d.facility);
                 $('#screening_id').val(d.screening_id);
+                $('#date_interview').val(d.date_interview);   // added
                 $('#dob').val(d.dob);
                 $('#age_years').val(d.age_years);
                 $('#age_months').val(d.age_months);
@@ -299,10 +309,14 @@
                 loadAuditLogs(activeId, '#screeningAuditLogs');
                 setEditMode(false);
             } else {
-                clearScreeningForm();
+                // invalid session – silent reset
                 localStorage.removeItem('cached_screening_id');
+                resetScreeningForm();
             }
-        }).fail(function() { clearScreeningForm(); });
+        }).fail(function() {
+            // API error – silent reset
+            resetScreeningForm();
+        });
     }
 
     function checkEligibility() {
@@ -316,8 +330,10 @@
                          (!exclusionChecked);
         if (!isEligible) {
             $('#ineligibilityWarning').removeClass('d-none');
+            $('#saveBtn').prop('disabled', true).addClass('btn-secondary').removeClass('btn-primary');
         } else {
             $('#ineligibilityWarning').addClass('d-none');
+            $('#saveBtn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
         }
     }
 
@@ -327,7 +343,7 @@
         loadScreeningData();
         var facility = $('#facility').val();
         if (facility) generateScreeningId(facility);
-        $('#clearScreeningBtn').click(clearScreeningForm);
+        $('#clearScreeningBtn').click(clearScreeningForm);   // manual clear with confirm
     });
 
     $('#facility').change(function() { generateScreeningId($(this).val()); });
@@ -375,8 +391,8 @@
             contentType: 'application/json',
             data: JSON.stringify(p),
             success: function() {
-                alert('Screening changes saved.');
-                loadScreeningData();
+                alert('Screening saved.');
+                window.location.href = '/form/enrolment';
             },
             error: function(xhr) {
                 alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
