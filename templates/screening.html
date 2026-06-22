@@ -12,7 +12,6 @@
         </span>
     </div>
     <form id="screeningForm" autocomplete="off">
-        <!-- All fields (same as before) – no changes needed here -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Facility</label>
@@ -185,6 +184,31 @@
 <script>
     var isEditMode = false;
 
+    function resetScreeningForm() {
+        $('#screeningForm')[0].reset();
+        $('#screening_id').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#lmp').val('');
+        $('#fundal_height').val('');
+        $('input[type="checkbox"]').prop('checked', false);
+        $('#date_interview').val(new Date().toISOString().substring(0,10));
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        localStorage.removeItem('cached_height');
+        localStorage.removeItem('cached_screening_id');
+        setEditMode(true); // new participant → Edit Mode
+    }
+
+    function clearScreeningForm() {
+        if (!confirm('Clear all data? This will reset the form completely.')) {
+            return;
+        }
+        resetScreeningForm();
+        setEditMode(true);
+        alert('Form cleared.');
+    }
+
     function setEditMode(enable) {
         isEditMode = enable;
         var editFields = $('.edit-field');
@@ -212,73 +236,21 @@
         }
     }
 
-    $('#toggleEditBtn').click(function() {
-        if (isEditMode) {
-            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
-                loadScreeningData();
-                setEditMode(false);
-            }
-        } else {
-            setEditMode(true);
-        }
-    });
-
-    $('#cancelEditBtn').click(function() {
-        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
-            loadScreeningData();
-            setEditMode(false);
-        }
-    });
-
-    $('#date_interview').val(new Date().toISOString().substring(0,10));
-
-    function generateScreeningId(facility) {
-        if (!facility) { $('#screening_id').val(''); return; }
-        $.getJSON('/api/generate_id?facility=' + facility, function(r) {
-            if (r.success) $('#screening_id').val(r.screening_id);
-            else alert('ID generation failed: ' + r.message);
-        }).fail(function() { alert('Server error – cannot generate ID.'); });
-    }
-
-    // ----- NEW: silent reset – no prompts -----
-    function resetScreeningForm() {
-        $('#screeningForm')[0].reset();
-        $('#screening_id').val('');
-        $('#age_years').val('');
-        $('#age_months').val('');
-        $('#lmp').val('');
-        $('#fundal_height').val('');
-        $('input[type="checkbox"]').prop('checked', false);
-        $('#facility').val('');
-        $('#date_interview').val(new Date().toISOString().substring(0,10));
-        $('#auditReasonBlock').addClass('d-none');
-        $('#change_reason').val('');
-        localStorage.removeItem('cached_height');
-        localStorage.removeItem('cached_screening_id');
-        setEditMode(false);
-    }
-
-    // ----- Clear button with confirm + alert -----
-    function clearScreeningForm() {
-        if (!confirm('Clear all data? This will reset the form completely.')) {
-            return;
-        }
-        resetScreeningForm();
-        alert('Form cleared.');
-    }
-
     function loadScreeningData() {
         var activeId = localStorage.getItem('cached_screening_id');
+
         if (!activeId) {
-            resetScreeningForm();   // silent – no popup
+            resetScreeningForm();   
+            setEditMode(true);      
             return;
         }
+
         $.getJSON('/api/lookup/screening/' + activeId, function(res) {
             if (res.success && res.data) {
                 var d = res.data;
                 $('#facility').val(d.facility);
                 $('#screening_id').val(d.screening_id);
-                $('#date_interview').val(d.date_interview);   // added
+                $('#date_interview').val(d.date_interview);
                 $('#dob').val(d.dob);
                 $('#age_years').val(d.age_years);
                 $('#age_months').val(d.age_months);
@@ -305,20 +277,22 @@
                 $('#exc_mental').prop('checked', d.exc_mental === 'Yes');
                 localStorage.setItem('cached_height', d.height);
                 checkEligibility();
-                $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#screeningAuditLogs');
-                setEditMode(false);
+                setEditMode(false); // existing → View Mode
             } else {
-                // invalid session – silent reset
+                // ID exists in localStorage but not in DB → invalid
                 localStorage.removeItem('cached_screening_id');
                 resetScreeningForm();
+                setEditMode(true);
             }
         }).fail(function() {
-            // API error – silent reset
+            // API error – clear and start fresh
+            localStorage.removeItem('cached_screening_id');
             resetScreeningForm();
+            setEditMode(true);
         });
     }
-
+-
     function checkEligibility() {
         var exclusionChecked = $('#exc_multiple').is(':checked') ||
                               $('#exc_fistula').is(':checked') ||
@@ -337,21 +311,48 @@
         }
     }
 
-    $(document).on('change', 'input[type="checkbox"], #eligibility, #consent', checkEligibility);
+    function generateScreeningId(facility) {
+        if (!facility) { $('#screening_id').val(''); return; }
+        $.getJSON('/api/generate_id?facility=' + facility, function(r) {
+            if (r.success) $('#screening_id').val(r.screening_id);
+            else alert('ID generation failed: ' + r.message);
+        }).fail(function() { alert('Server error – cannot generate ID.'); });
+    }
 
-    $(document).ready(function() {
-        loadScreeningData();
-        var facility = $('#facility').val();
-        if (facility) generateScreeningId(facility);
-        $('#clearScreeningBtn').click(clearScreeningForm);   // manual clear with confirm
+    $('#date_interview').val(new Date().toISOString().substring(0,10));
+
+    $('#toggleEditBtn').click(function() {
+        if (isEditMode) {
+            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
+                loadScreeningData();
+                setEditMode(false);
+            }
+        } else {
+            setEditMode(true);
+        }
     });
 
-    $('#facility').change(function() { generateScreeningId($(this).val()); });
+    $('#cancelEditBtn').click(function() {
+        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
+            loadScreeningData();
+            setEditMode(false);
+        }
+    });
+
+    $('#clearScreeningBtn').click(function() {
+        clearScreeningForm();
+    });
+
+    $('#facility').change(function() {
+        generateScreeningId($(this).val());
+    });
+
     $('#refreshIdBtn').click(function() {
         var facility = $('#facility').val();
         if (facility) generateScreeningId(facility);
         else alert('Select a facility first.');
     });
+
     $('#dob').change(function() {
         var b = new Date($(this).val());
         if (isNaN(b.getTime())) return;
@@ -360,6 +361,14 @@
         var totalMonths = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.4375));
         $('#age_years').val(Math.floor(totalMonths / 12));
         $('#age_months').val(totalMonths % 12);
+    });
+
+    $(document).on('change', 'input[type="checkbox"], #eligibility, #consent', checkEligibility);
+
+    $(document).ready(function() {
+        loadScreeningData();
+        var facility = $('#facility').val();
+        if (facility) generateScreeningId(facility);
     });
 
     $('#screeningForm').submit(function(e) {

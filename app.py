@@ -6,7 +6,6 @@ import logging
 from flask import Flask, session, request
 from config import Config
 from models import init_db, get_db
-import datetime
 
 def create_app():
     app = Flask(__name__)
@@ -15,21 +14,19 @@ def create_app():
     logging.basicConfig(level=logging.INFO)
     app.logger.setLevel(logging.INFO)
 
-    # Ensure database is initialized on startup
-    init_db(app)
+    # Force database creation on startup
+    with app.app_context():
+        init_db(app)
 
     @app.before_request
     def ensure_db():
-        if request.endpoint in ('static', 'init_db_route'):
+        if request.endpoint == 'static':
             return
         try:
             db = get_db()
             cursor = db.cursor()
-            if Config.DB_TYPE == 'postgresql':
-                cursor.execute("SELECT 1 FROM users LIMIT 1")
-            else:
-                cursor.execute("SELECT 1 FROM users LIMIT 1")
-        except Exception:
+            cursor.execute("SELECT 1 FROM users LIMIT 1")
+        except:
             init_db(app)
 
     @app.before_request
@@ -56,9 +53,9 @@ app = create_app()
 def init_db_route():
     try:
         init_db(app)
-        return "✅ Database initialized successfully! Tables created."
+        return "✅ Database initialized!"
     except Exception as e:
-        return f"❌ Error: {str(e)}"
+        return f"❌ {str(e)}"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
+    app.run(host='0.0.0.0', port=5000, debug=app.config.get('DEBUG', False))
