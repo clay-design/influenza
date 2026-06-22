@@ -12,6 +12,7 @@
         </span>
     </div>
     <form id="enrolmentForm" autocomplete="off">
+        <!-- ALL FIELDS (same as before) – keep your existing field markup -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Screening ID</label>
@@ -157,6 +158,7 @@
 </div>
 
 <script>
+    console.log("Enrolment page loaded");
     var isEditMode = false;
 
     function resetEnrolmentForm() {
@@ -194,6 +196,8 @@
         var toggleBtn = $('#toggleEditBtn');
         var cancelBtn = $('#cancelEditBtn');
         var modeIndicator = $('#modeIndicator');
+
+        console.log("setEditMode called with:", enable);
         if (enable) {
             fields.prop('readonly', false).prop('disabled', false);
             fields.filter('select').prop('disabled', false);
@@ -213,12 +217,14 @@
 
     function loadEnrolmentData() {
         var activeId = localStorage.getItem('cached_screening_id');
+        console.log("loadEnrolmentData, activeId:", activeId);
         if (!activeId) {
             resetEnrolmentForm();
             setEditMode(true);
             return;
         }
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
                 var sd = sres.data;
                 if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
@@ -255,6 +261,7 @@
                 }
 
                 $.getJSON('/api/fetch/enrolment/' + activeId, function(eres) {
+                    console.log("Enrolment data response:", eres);
                     if (eres.success && eres.data) {
                         var ed = eres.data;
                         $('#marital_status').val(ed.marital_status);
@@ -265,17 +272,20 @@
                         $('#occupation_other').val(ed.occupation_other);
                         if (ed.estimated_ga_us) $('#estimated_ga_us').val(ed.estimated_ga_us);
                     }
-                }).fail(function() {});
+                }).fail(function() { console.log("Enrolment fetch failed"); });
 
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#enrolmentAuditLogs');
-                setEditMode(false);
+
+                // **FORCE EDIT MODE FOR TESTING**
+                setEditMode(true);
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetEnrolmentForm();
                 setEditMode(true);
             }
         }).fail(function() {
+            console.log("Screening lookup failed");
             localStorage.removeItem('cached_screening_id');
             resetEnrolmentForm();
             setEditMode(true);
@@ -283,6 +293,7 @@
     }
 
     $('#toggleEditBtn').click(function() {
+        console.log("Edit button clicked, isEditMode:", isEditMode);
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
                 loadEnrolmentData();
@@ -303,7 +314,11 @@
     $('#clearBtn').click(clearEnrolmentForm);
 
     $(document).ready(function() {
+        console.log("Document ready");
         loadEnrolmentData();
+        // Also check role:
+        var userRole = '{{ session.get('user', {}).get('role') }}';
+        console.log("User role from template:", userRole);
     });
 
     $('#enrolmentForm').submit(function(e) {
