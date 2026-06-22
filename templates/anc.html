@@ -141,6 +141,7 @@
 <script>
     console.log("ANC page loaded");
     var isEditMode = false;
+    var currentAncId = null; // store the ID of the loaded ANC visit
 
     function resetAncForm() {
         $('#ancForm')[0].reset();
@@ -162,6 +163,7 @@
         $('#auditReasonBlock').addClass('d-none');
         $('#change_reason').val('');
         $('#tblAncHistoryRows').html('');
+        currentAncId = null;
         setEditMode(true);
     }
 
@@ -207,6 +209,7 @@
             setEditMode(true);
             return;
         }
+        // First load screening data for the header
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
             console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
@@ -217,13 +220,14 @@
                     window.location.href = '/form/screening';
                     return;
                 }
+                // Fill header fields
                 $('#screening_id').val(sd.screening_id);
                 $('#facility').val(sd.facility);
                 $('#dob').val(sd.dob);
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
-                if (sd.fundal_height) $('#fundal_height').val(sd.fundal_height);
 
+                // Auto-calculate GA from LMP if possible
                 if (sd.lmp) {
                     $.ajax({
                         url: '/api/calculate_ga',
@@ -231,14 +235,21 @@
                         contentType: 'application/json',
                         data: JSON.stringify({lmp: sd.lmp}),
                         success: function(res) {
-                            if (res.success) $('#gestational_age_weeks').val(res.ga_weeks);
+                            if (res.success) {
+                                // Only set if the field is empty (no existing ANC data)
+                                if (!$('#gestational_age_weeks').val()) {
+                                    $('#gestational_age_weeks').val(res.ga_weeks);
+                                }
+                            }
                         }
                     });
                 }
 
+                // Now load ANC visits
                 $.getJSON('/api/fetch/anc/' + activeId, function(ares) {
                     console.log("ANC history response:", ares);
                     if (ares.success && ares.data) {
+                        // Build history table
                         var h = '';
                         ares.data.forEach(function(r) {
                             h += '<tr onclick="populateAncRow(' + JSON.stringify(r).replace(/"/g, '&quot;') + ')" style="cursor:pointer;">';
@@ -247,12 +258,42 @@
                             h += '<td>' + r.fundal_height + '</td><td>' + r.muac + '</td><td>' + r.user_initials + '</td></tr>';
                         });
                         $('#tblAncHistoryRows').html(h);
-                    }
-                }).fail(function() { console.log("ANC fetch failed"); });
 
-                $('#auditReasonBlock').removeClass('d-none');
-                loadAuditLogs(activeId, '#ancAuditLogs');
-                setEditMode(true);
+                        // If there is at least one visit, load the most recent one
+                        if (ares.data.length > 0) {
+                            var latest = ares.data[ares.data.length - 1]; // assume last is latest by id
+                            // If we don't have a current ID set, use the latest
+                            if (!currentAncId) {
+                                populateAncRow(latest);
+                            }
+                        } else {
+                            // No visits, just keep form empty (user will create new)
+                            resetAncForm();
+                            // But keep header fields populated
+                            $('#screening_id').val(sd.screening_id);
+                            $('#facility').val(sd.facility);
+                            $('#dob').val(sd.dob);
+                            $('#age_years').val(sd.age_years);
+                            $('#age_months').val(sd.age_months);
+                            setEditMode(true);
+                        }
+                    } else {
+                        // No visits at all
+                        resetAncForm();
+                        $('#screening_id').val(sd.screening_id);
+                        $('#facility').val(sd.facility);
+                        $('#dob').val(sd.dob);
+                        $('#age_years').val(sd.age_years);
+                        $('#age_months').val(sd.age_months);
+                        setEditMode(true);
+                    }
+                    $('#auditReasonBlock').removeClass('d-none');
+                    loadAuditLogs(activeId, '#ancAuditLogs');
+                }).fail(function() {
+                    console.log("ANC fetch failed");
+                    resetAncForm();
+                    setEditMode(true);
+                });
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetAncForm();
@@ -267,12 +308,18 @@
     }
 
     function populateAncRow(obj) {
+        currentAncId = obj.id;
         $('#auditReasonBlock').removeClass('d-none');
         $('#change_reason').attr('required', true);
+        // Fill all fields with the ANC record data
         Object.keys(obj).forEach(function(k) {
             var field = $('#ancForm #' + k);
             if (field.length) field.val(obj[k]);
         });
+        // Ensure the hidden id is set
+        $('#id').val(obj.id);
+        // Switch to edit mode so user can modify if needed
+        setEditMode(true);
     }
 
     $('#toggleEditBtn').click(function() {
@@ -329,6 +376,10 @@
             if (id) p[id] = $(this).val();
         });
         p.screening_id = activeId;
+        // If we have a current ID, include it for update
+        if (currentAncId) {
+            p.id = currentAncId;
+        }
         $.ajax({
             url: '/api/submit/anc',
             type: 'POST',
@@ -336,7 +387,9 @@
             data: JSON.stringify(p),
             success: function() {
                 alert('ANC saved.');
-                window.location.href = '/form/delivery';
+                // Reload to reflect new data
+                loadAncData();
+                // Stay on page
             },
             error: function(xhr) {
                 alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
@@ -352,11 +405,19 @@
                 contentType: 'application/json',
                 data: JSON.stringify({lmp: d.lmp}),
                 success: function(res) {
-                    if (res.success) $('#gestational_age_weeks').val(res.ga_weeks);
+                    if (res.success) {
+                        if (!$('#gestational_age_weeks').val()) {
+                            $('#gestational_age_weeks').val(res.ga_weeks);
+                        }
+                    }
                 }
             });
         }
-        if (d.fundal_height) $('#fundal_height').val(d.fundal_height);
+        if (d.fundal_height) {
+            if (!$('#fundal_height').val()) {
+                $('#fundal_height').val(d.fundal_height);
+            }
+        }
     }
 </script>
 {% endblock %}

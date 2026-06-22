@@ -12,6 +12,9 @@
         </span>
     </div>
     <form id="deliveryForm" autocomplete="off">
+        <!-- Hidden Interview Date (auto-set to today) -->
+        <input type="hidden" id="date_interview" value="{{ now }}">
+
         <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Screening ID</label>
@@ -33,10 +36,6 @@
             </div>
             <hr class="my-2">
             <div class="col-md-3">
-                <label class="form-label">Interview Date</label>
-                <input type="date" id="date_interview" class="form-control edit-field" required>
-            </div>
-            <div class="col-md-3">
                 <label class="form-label">Mother Weight (kg)</label>
                 <input type="number" step="0.1" id="mother_weight" class="form-control edit-field" required>
             </div>
@@ -48,7 +47,7 @@
                 <label class="form-label">Temp Method</label>
                 <input type="text" id="vital_temp_method" class="form-control edit-field" required>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <label class="form-label">Respiratory Rate</label>
                 <input type="number" id="vital_rr" class="form-control edit-field" required>
             </div>
@@ -172,10 +171,12 @@
                 </select>
             </div>
         </div>
+
         <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
             <label class="form-label text-warning fw-bold">Modification Reason</label>
             <input type="text" id="change_reason" class="form-control" placeholder="e.g., Corrected birth weight">
         </div>
+
         <div class="d-flex justify-content-between mt-5 pt-3 border-top">
             <div>
                 <a href="/form/anc" class="btn btn-outline-secondary fw-bold"><i class="fa fa-chevron-left"></i> Back</a>
@@ -220,6 +221,9 @@
 <script>
     console.log("Delivery page loaded");
     var isEditMode = false;
+
+    // Set hidden date_interview to today
+    document.getElementById('date_interview').value = new Date().toISOString().substring(0,10);
 
     function resetDeliveryForm() {
         $('#deliveryForm')[0].reset();
@@ -412,6 +416,8 @@
             var id = $(this).attr('id');
             if (id) p[id] = $(this).val();
         });
+        // Ensure date_interview is set
+        p.date_interview = $('#date_interview').val();
         p.screening_id = activeId;
         $.ajax({
             url: '/api/submit/delivery',
