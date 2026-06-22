@@ -8,14 +8,13 @@ import os
 
 logger = logging.getLogger(__name__)
 
-if Config.DB_TYPE == 'postgresql':
-    import psycopg2
-    import psycopg2.extras
-
 def get_db():
     if 'db' not in g:
         if Config.DB_TYPE == 'postgresql':
-            g.db = psycopg2.connect(Config.DB_PATH, cursor_factory=psycopg2.extras.RealDictCursor)
+            import psycopg
+            import psycopg.rows
+            # Use dict row factory for named columns
+            g.db = psycopg.connect(Config.DB_PATH, row_factory=psycopg.rows.dict_row)
             g.db.autocommit = False
         else:
             g.db = sqlite3.connect(Config.DB_PATH)
@@ -211,7 +210,7 @@ def init_db(app):
                     'INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES (?, ?, ?, ?, ?, ?)',
                     ('admin', generate_password_hash('SuperAdmin@2026'), 'System Super Admin', 'SA', 'admin@kemri.go.ke', 'Super Admin')
                 )
-
+                
         for facility in Config.FACILITY_PREFIXES:
             if Config.DB_TYPE == 'postgresql':
                 cursor.execute("INSERT INTO id_counters (facility, last_number) VALUES (%s, 0) ON CONFLICT (facility) DO NOTHING", (facility,))
