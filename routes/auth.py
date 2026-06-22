@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import get_db
+from config import Config
 import secrets
 from datetime import datetime, timedelta
 import traceback
@@ -13,6 +14,9 @@ def generate_initials(full_name):
         return parts[0][:2].upper()
     else:
         return (parts[0][0] + parts[-1][0]).upper()
+
+def placeholder():
+    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
 
 @auth_bp.route('/login', methods=['GET'])
 def login_page():
@@ -29,10 +33,10 @@ def forgot_password_page():
 @auth_bp.route('/reset-password/<token>', methods=['GET'])
 def reset_password_page(token):
     db = get_db()
-    row = db.execute(
-        'SELECT user_id FROM password_reset_tokens WHERE token = ? AND expiry > ?',
-        (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    ).fetchone()
+    cursor = db.cursor()
+    p = placeholder()
+    cursor.execute(f'SELECT user_id FROM password_reset_tokens WHERE token = {p} AND expiry > {p}', (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    row = cursor.fetchone()
     if not row:
         return "Invalid or expired token", 400
     return render_template('reset_password.html', token=token)
@@ -47,7 +51,8 @@ def login():
             return jsonify({'success': False, 'message': 'Username and password required'}), 400
 
         db = get_db()
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        p = placeholder()
+        user = db.execute(f'SELECT * FROM users WHERE username = {p}', (username,)).fetchone()
         if user and check_password_hash(user['password_hash'], password):
             session.permanent = True
             session['user'] = {
@@ -75,14 +80,17 @@ def register():
             return jsonify({'success': False, 'message': 'All fields including email are required'}), 400
 
         db = get_db()
-        if db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
+        p = placeholder()
+        exists = db.execute(f'SELECT id FROM users WHERE username = {p}', (username,)).fetchone()
+        if exists:
             return jsonify({'success': False, 'message': 'Username already exists'}), 400
 
-        if db.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone():
+        exists_email = db.execute(f'SELECT id FROM users WHERE email = {p}', (email,)).fetchone()
+        if exists_email:
             return jsonify({'success': False, 'message': 'Email already registered'}), 400
 
         db.execute(
-            'INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES (?, ?, ?, ?, ?, ?)',
+            f'INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES ({p}, {p}, {p}, {p}, {p}, {p})',
             (username, generate_password_hash(password), full_name, initials, email, 'Field Technician')
         )
         db.commit()
@@ -100,16 +108,17 @@ def forgot_password():
             return jsonify({'success': False, 'message': 'Email address required'}), 400
 
         db = get_db()
-        user = db.execute('SELECT id, username, email FROM users WHERE email = ?', (email,)).fetchone()
+        p = placeholder()
+        user = db.execute(f'SELECT id, username, email FROM users WHERE email = {p}', (email,)).fetchone()
         if not user:
             return jsonify({'success': True, 'message': 'If the email exists, a reset link has been sent.'})
 
         token = secrets.token_urlsafe(32)
         expiry = (datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
 
-        db.execute('DELETE FROM password_reset_tokens WHERE user_id = ?', (user['id'],))
+        db.execute('DELETE FROM password_reset_tokens WHERE user_id = %s' if Config.DB_TYPE == 'postgresql' else 'DELETE FROM password_reset_tokens WHERE user_id = ?', (user['id'],))
         db.execute(
-            'INSERT INTO password_reset_tokens (user_id, token, expiry) VALUES (?, ?, ?)',
+            f'INSERT INTO password_reset_tokens (user_id, token, expiry) VALUES ({p}, {p}, {p})',
             (user['id'], token, expiry)
         )
         db.commit()
@@ -117,7 +126,6 @@ def forgot_password():
         base_url = current_app.config['BASE_URL']
         reset_link = f"{base_url}/reset-password/{token}"
         print(f"\n=== PASSWORD RESET LINK for {email}: {reset_link} ===\n")
-
         return jsonify({'success': True, 'message': 'Password reset link generated. Check the server console for the link.'})
 
     except Exception as e:
@@ -134,18 +142,16 @@ def reset_password():
             return jsonify({'success': False, 'message': 'Token and password required'}), 400
 
         db = get_db()
-        row = db.execute(
-            'SELECT user_id FROM password_reset_tokens WHERE token = ? AND expiry > ?',
-            (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        ).fetchone()
+        p = placeholder()
+        row = db.execute(f'SELECT user_id FROM password_reset_tokens WHERE token = {p} AND expiry > {p}', (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))).fetchone()
         if not row:
             return jsonify({'success': False, 'message': 'Invalid or expired token'}), 400
 
         db.execute(
-            'UPDATE users SET password_hash = ? WHERE id = ?',
+            f'UPDATE users SET password_hash = {p} WHERE id = {p}',
             (generate_password_hash(new_password), row['user_id'])
         )
-        db.execute('DELETE FROM password_reset_tokens WHERE token = ?', (token,))
+        db.execute('DELETE FROM password_reset_tokens WHERE token = %s' if Config.DB_TYPE == 'postgresql' else 'DELETE FROM password_reset_tokens WHERE token = ?', (token,))
         db.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -165,7 +171,8 @@ def verify_password():
 
         username = session['user']['username']
         db = get_db()
-        user = db.execute('SELECT password_hash FROM users WHERE username = ?', (username,)).fetchone()
+        p = placeholder()
+        user = db.execute(f'SELECT password_hash FROM users WHERE username = {p}', (username,)).fetchone()
         if user and check_password_hash(user['password_hash'], password):
             return jsonify({'success': True})
         else:
