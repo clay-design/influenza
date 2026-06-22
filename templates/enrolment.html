@@ -12,6 +12,7 @@
         </span>
     </div>
     <form id="enrolmentForm" autocomplete="off">
+        <!-- ALL FIELDS (same as before) – keep your existing fields -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Screening ID</label>
@@ -72,6 +73,7 @@
                 <input type="text" id="occupation_other" class="form-control edit-field">
             </div>
             <hr class="my-4">
+            <!-- Vitals (editable) -->
             <div class="col-md-2">
                 <label class="form-label">Height (cm)</label>
                 <input type="number" step="0.1" id="height" class="form-control edit-field" required>
@@ -109,10 +111,14 @@
                 <input type="number" step="0.1" id="estimated_ga_us" class="form-control edit-field" required>
             </div>
         </div>
+
+        <!-- AUDIT REASON BLOCK -->
         <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
             <label class="form-label text-warning fw-bold">Modification Reason</label>
             <input type="text" id="change_reason" class="form-control" placeholder="e.g., Updated marital status">
         </div>
+
+        <!-- BUTTONS -->
         <div class="d-flex justify-content-between mt-5 pt-3 border-top">
             <div>
                 <a href="/form/screening" class="btn btn-outline-secondary fw-bold"><i class="fa fa-chevron-left"></i> Back</a>
@@ -132,6 +138,7 @@
         </div>
     </form>
 
+    <!-- AUDIT LOG -->
     <div class="mt-5 pt-3 border-top">
         <h5 class="fw-bold text-secondary"><i class="fa fa-history me-2"></i>Edit History</h5>
         <div class="table-responsive">
@@ -157,6 +164,7 @@
 <script>
     var isEditMode = false;
 
+    // Silent reset
     function resetEnrolmentForm() {
         $('#enrolmentForm')[0].reset();
         $('#screening_id').val('');
@@ -179,12 +187,14 @@
         setEditMode(true);
     }
 
+    // Clear button
     function clearEnrolmentForm() {
         if (!confirm('Clear all data? This will reset the form completely.')) return;
         resetEnrolmentForm();
         alert('Form cleared.');
     }
 
+    // Toggle edit mode
     function setEditMode(enable) {
         isEditMode = enable;
         var fields = $('.edit-field');
@@ -209,6 +219,7 @@
         }
     }
 
+    // Load data (same logic as screening)
     function loadEnrolmentData() {
         var activeId = localStorage.getItem('cached_screening_id');
         if (!activeId) {
@@ -239,6 +250,7 @@
                 $('#bp_systolic').val(sd.bp_systolic);
                 $('#bp_diastolic').val(sd.bp_diastolic);
                 localStorage.setItem('cached_height', sd.height);
+
                 if (sd.lmp) {
                     $.ajax({
                         url: '/api/calculate_ga',
@@ -250,6 +262,8 @@
                         }
                     });
                 }
+
+                // Load enrolment record if exists
                 $.getJSON('/api/fetch/enrolment/' + activeId, function(eres) {
                     if (eres.success && eres.data) {
                         var ed = eres.data;
@@ -262,9 +276,10 @@
                         if (ed.estimated_ga_us) $('#estimated_ga_us').val(ed.estimated_ga_us);
                     }
                 }).fail(function() {});
+
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#enrolmentAuditLogs');
-                setEditMode(false);
+                setEditMode(false); // existing record → View Mode
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetEnrolmentForm();
@@ -277,6 +292,7 @@
         });
     }
 
+    // Event handlers
     $('#toggleEditBtn').click(function() {
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
@@ -301,10 +317,12 @@
         loadEnrolmentData();
     });
 
+    // Submit handler
     $('#enrolmentForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');
         if (!activeId) { alert('No active session.'); window.location.href = '/form/screening'; return; }
+        // Verify eligibility again
         $.ajax({
             url: '/api/lookup/screening/' + activeId,
             type: 'GET',

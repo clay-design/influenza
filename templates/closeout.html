@@ -178,6 +178,8 @@
                 $('#dob').val(sd.dob);
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
+
+                // Load closeout record if exists
                 $.getJSON('/api/fetch/closeout/' + activeId, function(cres) {
                     if (cres.success && cres.data) {
                         var d = cres.data;
@@ -187,6 +189,7 @@
                         });
                     }
                 }).fail(function() {});
+
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#closeoutAuditLogs');
                 setEditMode(false);
@@ -202,6 +205,7 @@
         });
     }
 
+    // Event handlers
     $('#toggleEditBtn').click(function() {
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
@@ -226,6 +230,7 @@
         loadCloseoutData();
     });
 
+    // Submit handler
     $('#closeoutForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');

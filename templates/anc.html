@@ -141,6 +141,7 @@
 <script>
     var isEditMode = false;
 
+    // Silent reset
     function resetAncForm() {
         $('#ancForm')[0].reset();
         $('#screening_id').val('');
@@ -164,12 +165,14 @@
         setEditMode(true);
     }
 
+    // Clear button
     function clearAncForm() {
         if (!confirm('Clear all data? This will reset the form completely.')) return;
         resetAncForm();
         alert('Form cleared.');
     }
 
+    // Toggle edit mode
     function setEditMode(enable) {
         isEditMode = enable;
         var fields = $('.edit-field');
@@ -196,6 +199,7 @@
         }
     }
 
+    // Load data
     function loadAncData() {
         var activeId = localStorage.getItem('cached_screening_id');
         if (!activeId) {
@@ -218,6 +222,7 @@
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
                 if (sd.fundal_height) $('#fundal_height').val(sd.fundal_height);
+
                 if (sd.lmp) {
                     $.ajax({
                         url: '/api/calculate_ga',
@@ -229,6 +234,8 @@
                         }
                     });
                 }
+
+                // Load ANC history
                 $.getJSON('/api/fetch/anc/' + activeId, function(ares) {
                     if (ares.success && ares.data) {
                         var h = '';
@@ -241,6 +248,7 @@
                         $('#tblAncHistoryRows').html(h);
                     }
                 }).fail(function() {});
+
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#ancAuditLogs');
                 setEditMode(false);
@@ -265,6 +273,7 @@
         });
     }
 
+    // Event handlers
     $('#toggleEditBtn').click(function() {
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
@@ -289,6 +298,7 @@
         loadAncData();
     });
 
+    // Submit handler
     $('#ancForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');

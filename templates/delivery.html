@@ -322,6 +322,8 @@
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
                 localStorage.setItem('cached_height', sd.height);
+
+                // Load delivery record if exists
                 $.getJSON('/api/fetch/delivery/' + activeId, function(dres) {
                     if (dres.success && dres.data) {
                         var d = dres.data;
@@ -334,6 +336,7 @@
                         if (d.mother_weight) calculateBmi();
                     }
                 }).fail(function() {});
+
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#deliveryAuditLogs');
                 setEditMode(false);
@@ -349,6 +352,7 @@
         });
     }
 
+    // Event handlers
     $('#toggleEditBtn').click(function() {
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
@@ -374,6 +378,7 @@
         $('#mother_weight').on('input', calculateBmi);
     });
 
+    // Submit handler
     $('#deliveryForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');
