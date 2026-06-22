@@ -8,8 +8,6 @@ from config import Config
 from models import init_db
 import datetime
 
-
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -37,6 +35,15 @@ def create_app():
 
     return app
 
+app = create_app()
+
+@app.route('/init-db')
+def init_db_route():
+    try:
+        init_db(app)
+        return "✅ Database initialized successfully! Tables created."
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
