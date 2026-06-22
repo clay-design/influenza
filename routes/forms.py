@@ -256,37 +256,73 @@ def submit_anc():
 
     try:
         if action == 'CREATE':
-            cursor.execute(
-                f"""INSERT INTO anc_visits
-                   (screening_id, facility, dob, age_years, age_months,
-                    visit_number, visit_date, gestational_age_weeks, weight,
-                    bp_systolic, bp_diastolic, fundal_height, muac,
-                    complaints, medication_given, next_appointment_date,
-                    user_initials, timestamp)
-                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
-                (
-                    sid,
-                    data.get('facility'),
-                    data.get('dob'),
-                    int(data.get('age_years', 0)),
-                    int(data.get('age_months', 0)),
-                    int(data.get('visit_number')),
-                    data.get('visit_date'),
-                    float(data.get('gestational_age_weeks', 0)),
-                    float(data.get('weight', 0)),
-                    int(data.get('bp_systolic', 0)),
-                    int(data.get('bp_diastolic', 0)),
-                    float(data.get('fundal_height', 0)),
-                    float(data.get('muac', 0)),
-                    data.get('complaints'),
-                    data.get('medication_given'),
-                    data.get('next_appointment_date'),
-                    session['user']['initials'],
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if Config.DB_TYPE == 'postgresql':
+                cursor.execute(
+                    f"""INSERT INTO anc_visits
+                       (screening_id, facility, dob, age_years, age_months,
+                        visit_number, visit_date, gestational_age_weeks, weight,
+                        bp_systolic, bp_diastolic, fundal_height, muac,
+                        complaints, medication_given, next_appointment_date,
+                        user_initials, timestamp)
+                       VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})
+                       RETURNING id""",
+                    (
+                        sid,
+                        data.get('facility'),
+                        data.get('dob'),
+                        int(data.get('age_years', 0)),
+                        int(data.get('age_months', 0)),
+                        int(data.get('visit_number')),
+                        data.get('visit_date'),
+                        float(data.get('gestational_age_weeks', 0)),
+                        float(data.get('weight', 0)),
+                        int(data.get('bp_systolic', 0)),
+                        int(data.get('bp_diastolic', 0)),
+                        float(data.get('fundal_height', 0)),
+                        float(data.get('muac', 0)),
+                        data.get('complaints'),
+                        data.get('medication_given'),
+                        data.get('next_appointment_date'),
+                        session['user']['initials'],
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    )
                 )
-            )
-            vid = cursor.lastrowid if Config.DB_TYPE == 'sqlite' else cursor.fetchone()['id'] if hasattr(cursor, 'fetchone') else None
+                row = cursor.fetchone()
+                vid = row['id'] if row else None
+            else:
+                # SQLite
+                cursor.execute(
+                    f"""INSERT INTO anc_visits
+                       (screening_id, facility, dob, age_years, age_months,
+                        visit_number, visit_date, gestational_age_weeks, weight,
+                        bp_systolic, bp_diastolic, fundal_height, muac,
+                        complaints, medication_given, next_appointment_date,
+                        user_initials, timestamp)
+                       VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
+                    (
+                        sid,
+                        data.get('facility'),
+                        data.get('dob'),
+                        int(data.get('age_years', 0)),
+                        int(data.get('age_months', 0)),
+                        int(data.get('visit_number')),
+                        data.get('visit_date'),
+                        float(data.get('gestational_age_weeks', 0)),
+                        float(data.get('weight', 0)),
+                        int(data.get('bp_systolic', 0)),
+                        int(data.get('bp_diastolic', 0)),
+                        float(data.get('fundal_height', 0)),
+                        float(data.get('muac', 0)),
+                        data.get('complaints'),
+                        data.get('medication_given'),
+                        data.get('next_appointment_date'),
+                        session['user']['initials'],
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    )
+                )
+                vid = cursor.lastrowid
         else:
+            # UPDATE
             cursor.execute(
                 f"""UPDATE anc_visits SET
                    screening_id={ph()}, facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
