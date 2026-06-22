@@ -33,7 +33,7 @@
             </div>
             <hr class="my-2">
             <div class="col-md-4">
-                <label class="form-label">Interview Date</label>
+                <label class="form-label">Interview Date <span class="text-muted small">(auto-filled from Screening)</span></label>
                 <input type="date" id="date_interview" class="form-control edit-field" required>
             </div>
             <div class="col-md-4">
@@ -121,7 +121,7 @@
         $('#dob').val('');
         $('#age_years').val('');
         $('#age_months').val('');
-        $('#date_interview').val(new Date().toISOString().substring(0,10));
+        $('#date_interview').val('');
         $('#termination_date').val(new Date().toISOString().substring(0,10));
         $('#auditReasonBlock').addClass('d-none');
         $('#change_reason').val('');
@@ -168,6 +168,7 @@
             setEditMode(true);
             return;
         }
+        // Load screening data first to get interview date
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
             console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
@@ -178,16 +179,23 @@
                     window.location.href = '/form/screening';
                     return;
                 }
+                // Fill header fields
                 $('#screening_id').val(sd.screening_id);
                 $('#facility').val(sd.facility);
                 $('#dob').val(sd.dob);
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
+                // Auto-fill interview date from screening
+                if (sd.date_interview) {
+                    $('#date_interview').val(sd.date_interview);
+                }
 
+                // Now load closeout record if exists
                 $.getJSON('/api/fetch/closeout/' + activeId, function(cres) {
                     console.log("Closeout data response:", cres);
                     if (cres.success && cres.data) {
                         var d = cres.data;
+                        // Overlay closeout fields
                         Object.keys(d).forEach(function(k) {
                             var field = $('#closeoutForm #' + k);
                             if (field.length) field.val(d[k]);
