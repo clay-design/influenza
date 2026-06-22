@@ -8,15 +8,15 @@ import traceback
 
 auth_bp = Blueprint('auth', __name__)
 
+def ph():
+    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
+
 def generate_initials(full_name):
     parts = full_name.strip().split()
     if len(parts) == 1:
         return parts[0][:2].upper()
     else:
         return (parts[0][0] + parts[-1][0]).upper()
-
-def placeholder():
-    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
 
 @auth_bp.route('/login', methods=['GET'])
 def login_page():
@@ -34,8 +34,10 @@ def forgot_password_page():
 def reset_password_page(token):
     db = get_db()
     cursor = db.cursor()
-    p = placeholder()
-    cursor.execute(f'SELECT user_id FROM password_reset_tokens WHERE token = {p} AND expiry > {p}', (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    cursor.execute(
+        f"SELECT user_id FROM password_reset_tokens WHERE token = {ph()} AND expiry > {ph()}",
+        (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    )
     row = cursor.fetchone()
     if not row:
         return "Invalid or expired token", 400
@@ -51,8 +53,9 @@ def login():
             return jsonify({'success': False, 'message': 'Username and password required'}), 400
 
         db = get_db()
-        p = placeholder()
-        user = db.execute(f'SELECT * FROM users WHERE username = {p}', (username,)).fetchone()
+        cursor = db.cursor()
+        cursor.execute(f"SELECT * FROM users WHERE username = {ph()}", (username,))
+        user = cursor.fetchone()
         if user and check_password_hash(user['password_hash'], password):
             session.permanent = True
             session['user'] = {
@@ -80,17 +83,17 @@ def register():
             return jsonify({'success': False, 'message': 'All fields including email are required'}), 400
 
         db = get_db()
-        p = placeholder()
-        exists = db.execute(f'SELECT id FROM users WHERE username = {p}', (username,)).fetchone()
-        if exists:
+        cursor = db.cursor()
+        cursor.execute(f"SELECT id FROM users WHERE username = {ph()}", (username,))
+        if cursor.fetchone():
             return jsonify({'success': False, 'message': 'Username already exists'}), 400
 
-        exists_email = db.execute(f'SELECT id FROM users WHERE email = {p}', (email,)).fetchone()
-        if exists_email:
+        cursor.execute(f"SELECT id FROM users WHERE email = {ph()}", (email,))
+        if cursor.fetchone():
             return jsonify({'success': False, 'message': 'Email already registered'}), 400
 
-        db.execute(
-            f'INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES ({p}, {p}, {p}, {p}, {p}, {p})',
+        cursor.execute(
+            f"INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES ({ph()}, {ph()}, {ph()}, {ph()}, {ph()}, {ph()})",
             (username, generate_password_hash(password), full_name, initials, email, 'Field Technician')
         )
         db.commit()
@@ -108,17 +111,18 @@ def forgot_password():
             return jsonify({'success': False, 'message': 'Email address required'}), 400
 
         db = get_db()
-        p = placeholder()
-        user = db.execute(f'SELECT id, username, email FROM users WHERE email = {p}', (email,)).fetchone()
+        cursor = db.cursor()
+        cursor.execute(f"SELECT id, username, email FROM users WHERE email = {ph()}", (email,))
+        user = cursor.fetchone()
         if not user:
             return jsonify({'success': True, 'message': 'If the email exists, a reset link has been sent.'})
 
         token = secrets.token_urlsafe(32)
         expiry = (datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
 
-        db.execute('DELETE FROM password_reset_tokens WHERE user_id = %s' if Config.DB_TYPE == 'postgresql' else 'DELETE FROM password_reset_tokens WHERE user_id = ?', (user['id'],))
-        db.execute(
-            f'INSERT INTO password_reset_tokens (user_id, token, expiry) VALUES ({p}, {p}, {p})',
+        cursor.execute(f"DELETE FROM password_reset_tokens WHERE user_id = {ph()}", (user['id'],))
+        cursor.execute(
+            f"INSERT INTO password_reset_tokens (user_id, token, expiry) VALUES ({ph()}, {ph()}, {ph()})",
             (user['id'], token, expiry)
         )
         db.commit()
@@ -126,8 +130,8 @@ def forgot_password():
         base_url = current_app.config['BASE_URL']
         reset_link = f"{base_url}/reset-password/{token}"
         print(f"\n=== PASSWORD RESET LINK for {email}: {reset_link} ===\n")
-        return jsonify({'success': True, 'message': 'Password reset link generated. Check the server console for the link.'})
 
+        return jsonify({'success': True, 'message': 'Password reset link generated. Check the server console for the link.'})
     except Exception as e:
         print("FORGOT PASSWORD ERROR:", traceback.format_exc())
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -142,16 +146,20 @@ def reset_password():
             return jsonify({'success': False, 'message': 'Token and password required'}), 400
 
         db = get_db()
-        p = placeholder()
-        row = db.execute(f'SELECT user_id FROM password_reset_tokens WHERE token = {p} AND expiry > {p}', (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))).fetchone()
+        cursor = db.cursor()
+        cursor.execute(
+            f"SELECT user_id FROM password_reset_tokens WHERE token = {ph()} AND expiry > {ph()}",
+            (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        )
+        row = cursor.fetchone()
         if not row:
             return jsonify({'success': False, 'message': 'Invalid or expired token'}), 400
 
-        db.execute(
-            f'UPDATE users SET password_hash = {p} WHERE id = {p}',
+        cursor.execute(
+            f"UPDATE users SET password_hash = {ph()} WHERE id = {ph()}",
             (generate_password_hash(new_password), row['user_id'])
         )
-        db.execute('DELETE FROM password_reset_tokens WHERE token = %s' if Config.DB_TYPE == 'postgresql' else 'DELETE FROM password_reset_tokens WHERE token = ?', (token,))
+        cursor.execute(f"DELETE FROM password_reset_tokens WHERE token = {ph()}", (token,))
         db.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -171,8 +179,9 @@ def verify_password():
 
         username = session['user']['username']
         db = get_db()
-        p = placeholder()
-        user = db.execute(f'SELECT password_hash FROM users WHERE username = {p}', (username,)).fetchone()
+        cursor = db.cursor()
+        cursor.execute(f"SELECT password_hash FROM users WHERE username = {ph()}", (username,))
+        user = cursor.fetchone()
         if user and check_password_hash(user['password_hash'], password):
             return jsonify({'success': True})
         else:

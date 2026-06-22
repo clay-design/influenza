@@ -4,16 +4,19 @@ import traceback
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
 from models import get_db
+from config import Config
 
 forms_bp = Blueprint('forms', __name__)
 logger = logging.getLogger(__name__)
 
+def ph():
+    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
+
 def audit_log(table, record_id, action, old_value, new_value, change_reason, user_initials):
     db = get_db()
-    db.execute(
-        '''INSERT INTO audit_logs
-           (table_name, record_id, action, old_value, new_value, change_reason, user_initials, timestamp)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+    cursor = db.cursor()
+    cursor.execute(
+        f"INSERT INTO audit_logs (table_name, record_id, action, old_value, new_value, change_reason, user_initials, timestamp) VALUES ({ph()}, {ph()}, {ph()}, {ph()}, {ph()}, {ph()}, {ph()}, {ph()})",
         (table, record_id, action,
          json.dumps(dict(old_value)) if old_value else None,
          json.dumps(new_value) if new_value else None,
@@ -27,6 +30,7 @@ def validate_positive_number(value, field_name):
     if value is not None and isinstance(value, (int, float)) and value < 0:
         raise ValueError(f"{field_name} cannot be negative")
 
+# ---------- GA calculator ----------
 @forms_bp.route('/calculate_ga', methods=['POST'])
 def calculate_ga():
     data = request.get_json() or {}
@@ -43,16 +47,19 @@ def calculate_ga():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400
 
+# ---------- Audit endpoint ----------
 @forms_bp.route('/audit/<screening_id>', methods=['GET'])
 def get_audit_logs(screening_id):
-    """Fetch audit logs for a screening ID."""
     db = get_db()
-    rows = db.execute(
-        'SELECT * FROM audit_logs WHERE record_id = ? ORDER BY timestamp DESC',
+    cursor = db.cursor()
+    cursor.execute(
+        f"SELECT * FROM audit_logs WHERE record_id = {ph()} ORDER BY timestamp DESC",
         (screening_id,)
-    ).fetchall()
+    )
+    rows = cursor.fetchall()
     return jsonify([dict(r) for r in rows])
 
+# ---------- Screening ----------
 @forms_bp.route('/submit/screening', methods=['POST'])
 def submit_screening():
     if session['user']['role'] == 'Field Technician':
@@ -65,9 +72,12 @@ def submit_screening():
         return jsonify({'success': False, 'message': 'Missing screening_id or facility'}), 400
 
     db = get_db()
-    old = db.execute('SELECT * FROM screening WHERE screening_id = ?', (sid,)).fetchone()
+    cursor = db.cursor()
+    cursor.execute(f"SELECT * FROM screening WHERE screening_id = {ph()}", (sid,))
+    old = cursor.fetchone()
     action = 'UPDATE' if old else 'CREATE'
 
+    # Validate numeric fields
     try:
         validate_positive_number(float(data.get('height', 0)), 'Height')
         validate_positive_number(float(data.get('weight', 0)), 'Weight')
@@ -85,17 +95,17 @@ def submit_screening():
 
     try:
         if not old:
-            db.execute('UPDATE id_counters SET last_number = last_number + 1 WHERE facility = ?', (facility,))
+            cursor.execute(f"UPDATE id_counters SET last_number = last_number + 1 WHERE facility = {ph()}", (facility,))
 
-        db.execute(
-            '''INSERT OR REPLACE INTO screening
+        cursor.execute(
+            f"""INSERT OR REPLACE INTO screening
                (screening_id, date_interview, facility, dob, age_years, age_months,
                 height, weight, temperature, temp_method, resp_rate, pulse_rate,
                 bp_systolic, bp_diastolic, lmp, fundal_height,
                 inc_resident, inc_pregnancy, inc_gestation, inc_hiv, inc_delivery,
                 exc_multiple, exc_fistula, exc_mental,
                 eligibility, consent, consent_reason, user_initials, timestamp)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
             (
                 sid,
                 data.get('date_interview'),
@@ -136,6 +146,7 @@ def submit_screening():
         logger.error(f"Screening error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# ---------- Enrolment ----------
 @forms_bp.route('/submit/enrolment', methods=['POST'])
 def submit_enrolment():
     if session['user']['role'] == 'Field Technician':
@@ -147,7 +158,9 @@ def submit_enrolment():
         return jsonify({'success': False, 'message': 'Missing screening_id'}), 400
 
     db = get_db()
-    old = db.execute('SELECT * FROM enrolment WHERE screening_id = ?', (sid,)).fetchone()
+    cursor = db.cursor()
+    cursor.execute(f"SELECT * FROM enrolment WHERE screening_id = {ph()}", (sid,))
+    old = cursor.fetchone()
     action = 'UPDATE' if old else 'CREATE'
 
     try:
@@ -166,13 +179,13 @@ def submit_enrolment():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        db.execute(
-            '''INSERT OR REPLACE INTO enrolment
+        cursor.execute(
+            f"""INSERT OR REPLACE INTO enrolment
                (screening_id, facility, dob, age_years, age_months,
                 marital_status, husband_name, village, education, occupation, occupation_other,
                 height, weight, temperature, temp_method, resp_rate, pulse_rate,
                 bp_systolic, bp_diastolic, estimated_ga_us, user_initials, timestamp)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
             (
                 sid,
                 data.get('facility'),
@@ -206,6 +219,7 @@ def submit_enrolment():
         logger.error(f"Enrolment error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# ---------- ANC ----------
 @forms_bp.route('/submit/anc', methods=['POST'])
 def submit_anc():
     if session['user']['role'] == 'Field Technician':
@@ -218,10 +232,12 @@ def submit_anc():
         return jsonify({'success': False, 'message': 'Missing screening_id'}), 400
 
     db = get_db()
+    cursor = db.cursor()
     old = None
     action = 'CREATE'
     if vid:
-        old = db.execute('SELECT * FROM anc_visits WHERE id = ?', (vid,)).fetchone()
+        cursor.execute(f"SELECT * FROM anc_visits WHERE id = {ph()}", (vid,))
+        old = cursor.fetchone()
         if old:
             action = 'UPDATE'
 
@@ -240,14 +256,14 @@ def submit_anc():
 
     try:
         if action == 'CREATE':
-            cur = db.execute(
-                '''INSERT INTO anc_visits
+            cursor.execute(
+                f"""INSERT INTO anc_visits
                    (screening_id, facility, dob, age_years, age_months,
                     visit_number, visit_date, gestational_age_weeks, weight,
                     bp_systolic, bp_diastolic, fundal_height, muac,
                     complaints, medication_given, next_appointment_date,
                     user_initials, timestamp)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
                 (
                     sid,
                     data.get('facility'),
@@ -269,16 +285,16 @@ def submit_anc():
                     datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 )
             )
-            vid = cur.lastrowid
+            vid = cursor.lastrowid if Config.DB_TYPE == 'sqlite' else cursor.fetchone()['id'] if hasattr(cursor, 'fetchone') else None
         else:
-            db.execute(
-                '''UPDATE anc_visits SET
-                   screening_id=?, facility=?, dob=?, age_years=?, age_months=?,
-                   visit_number=?, visit_date=?, gestational_age_weeks=?, weight=?,
-                   bp_systolic=?, bp_diastolic=?, fundal_height=?, muac=?,
-                   complaints=?, medication_given=?, next_appointment_date=?,
-                   user_initials=?, timestamp=?
-                   WHERE id=?''',
+            cursor.execute(
+                f"""UPDATE anc_visits SET
+                   screening_id={ph()}, facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
+                   visit_number={ph()}, visit_date={ph()}, gestational_age_weeks={ph()}, weight={ph()},
+                   bp_systolic={ph()}, bp_diastolic={ph()}, fundal_height={ph()}, muac={ph()},
+                   complaints={ph()}, medication_given={ph()}, next_appointment_date={ph()},
+                   user_initials={ph()}, timestamp={ph()}
+                   WHERE id={ph()}""",
                 (
                     sid,
                     data.get('facility'),
@@ -321,7 +337,9 @@ def submit_delivery():
         return jsonify({'success': False, 'message': 'Missing screening_id'}), 400
 
     db = get_db()
-    old = db.execute('SELECT * FROM delivery WHERE screening_id = ?', (sid,)).fetchone()
+    cursor = db.cursor()
+    cursor.execute(f"SELECT * FROM delivery WHERE screening_id = {ph()}", (sid,))
+    old = cursor.fetchone()
     action = 'UPDATE' if old else 'CREATE'
 
     try:
@@ -341,8 +359,8 @@ def submit_delivery():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        db.execute(
-            '''INSERT OR REPLACE INTO delivery
+        cursor.execute(
+            f"""INSERT OR REPLACE INTO delivery
                (screening_id, facility, dob, age_years, age_months,
                 date_interview, mother_weight, vital_temp, vital_temp_method,
                 vital_rr, vital_hr, bp_systolic, bp_diastolic, oxygen_sat, oxygen_supp,
@@ -352,7 +370,7 @@ def submit_delivery():
                 csection_indication, csection_indication_other,
                 birth_weight_g, infant_sex, infant_status, birth_asphyxia,
                 user_initials, timestamp)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
             (
                 sid,
                 data.get('facility'),
@@ -397,6 +415,7 @@ def submit_delivery():
         logger.error(f"Delivery error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# ---------- Closeout ----------
 @forms_bp.route('/submit/closeout', methods=['POST'])
 def submit_closeout():
     if session['user']['role'] == 'Field Technician':
@@ -408,20 +427,22 @@ def submit_closeout():
         return jsonify({'success': False, 'message': 'Missing screening_id'}), 400
 
     db = get_db()
-    old = db.execute('SELECT * FROM closeout WHERE screening_id = ?', (sid,)).fetchone()
+    cursor = db.cursor()
+    cursor.execute(f"SELECT * FROM closeout WHERE screening_id = {ph()}", (sid,))
+    old = cursor.fetchone()
     action = 'UPDATE' if old else 'CREATE'
 
     if action == 'UPDATE' and not data.get('change_reason'):
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        db.execute(
-            '''INSERT OR REPLACE INTO closeout
+        cursor.execute(
+            f"""INSERT OR REPLACE INTO closeout
                (screening_id, facility, dob, age_years, age_months,
                 date_interview, termination_date, participant_status,
                 discontinuation_reason, discontinuation_specify,
                 user_initials, timestamp)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
             (
                 sid,
                 data.get('facility'),
