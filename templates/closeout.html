@@ -75,6 +75,7 @@
                 {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
                     <button type="button" id="toggleEditBtn" class="btn btn-outline-primary ms-2"><i class="fa fa-pen"></i> Edit</button>
                     <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary ms-2 d-none"><i class="fa fa-times"></i> Cancel</button>
+                    <button type="button" id="clearBtn" class="btn btn-outline-danger ms-2"><i class="fa fa-eraser"></i> Clear</button>
                 {% endif %}
             </div>
             <div>
@@ -112,29 +113,93 @@
 <script>
     var isEditMode = false;
 
+    function resetCloseoutForm() {
+        $('#closeoutForm')[0].reset();
+        $('#screening_id').val('');
+        $('#facility').val('');
+        $('#dob').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#date_interview').val(new Date().toISOString().substring(0,10));
+        $('#termination_date').val(new Date().toISOString().substring(0,10));
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        setEditMode(true);
+    }
+
+    function clearCloseoutForm() {
+        if (!confirm('Clear all data? This will reset the form completely.')) return;
+        resetCloseoutForm();
+        alert('Form cleared.');
+    }
+
     function setEditMode(enable) {
         isEditMode = enable;
-        var editFields = $('.edit-field');
+        var fields = $('.edit-field');
         var saveBtn = $('#saveBtn');
         var toggleBtn = $('#toggleEditBtn');
         var cancelBtn = $('#cancelEditBtn');
         var modeIndicator = $('#modeIndicator');
-
         if (enable) {
-            editFields.prop('readonly', false).prop('disabled', false);
-            editFields.filter('select').prop('disabled', false);
+            fields.prop('readonly', false).prop('disabled', false);
+            fields.filter('select').prop('disabled', false);
             saveBtn.prop('disabled', false);
             modeIndicator.text('Edit Mode').css('color', 'orange');
             toggleBtn.html('<i class="fa fa-eye"></i> View');
             cancelBtn.removeClass('d-none');
         } else {
-            editFields.prop('readonly', true).prop('disabled', true);
-            editFields.filter('select').prop('disabled', true);
+            fields.prop('readonly', true).prop('disabled', true);
+            fields.filter('select').prop('disabled', true);
             saveBtn.prop('disabled', true);
             modeIndicator.text('View Mode').css('color', '');
             toggleBtn.html('<i class="fa fa-pen"></i> Edit');
             cancelBtn.addClass('d-none');
         }
+    }
+
+    function loadCloseoutData() {
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) {
+            resetCloseoutForm();
+            setEditMode(true);
+            return;
+        }
+        $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            if (sres.success && sres.data) {
+                var sd = sres.data;
+                if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                    sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                    alert('⚠️ This participant is NOT eligible. Please correct the Screening form first.');
+                    window.location.href = '/form/screening';
+                    return;
+                }
+                $('#screening_id').val(sd.screening_id);
+                $('#facility').val(sd.facility);
+                $('#dob').val(sd.dob);
+                $('#age_years').val(sd.age_years);
+                $('#age_months').val(sd.age_months);
+                $.getJSON('/api/fetch/closeout/' + activeId, function(cres) {
+                    if (cres.success && cres.data) {
+                        var d = cres.data;
+                        Object.keys(d).forEach(function(k) {
+                            var field = $('#closeoutForm #' + k);
+                            if (field.length) field.val(d[k]);
+                        });
+                    }
+                }).fail(function() {});
+                $('#auditReasonBlock').removeClass('d-none');
+                loadAuditLogs(activeId, '#closeoutAuditLogs');
+                setEditMode(false);
+            } else {
+                localStorage.removeItem('cached_screening_id');
+                resetCloseoutForm();
+                setEditMode(true);
+            }
+        }).fail(function() {
+            localStorage.removeItem('cached_screening_id');
+            resetCloseoutForm();
+            setEditMode(true);
+        });
     }
 
     $('#toggleEditBtn').click(function() {
@@ -155,65 +220,9 @@
         }
     });
 
-    function clearCloseoutForm() {
-        $('#closeoutForm')[0].reset();
-        $('#screening_id').val('');
-        $('#facility').val('');
-        $('#dob').val('');
-        $('#age_years').val('');
-        $('#age_months').val('');
-        $('#date_interview').val(new Date().toISOString().substring(0,10));
-        $('#termination_date').val(new Date().toISOString().substring(0,10));
-        $('#auditReasonBlock').addClass('d-none');
-        $('#change_reason').val('');
-        setEditMode(false);
-    }
-
-    function loadCloseoutData() {
-        var activeId = localStorage.getItem('cached_screening_id');
-        if (!activeId) { clearCloseoutForm(); return; }
-
-        $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
-            if (sres.success && sres.data) {
-                var sd = sres.data;
-                if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
-                    sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
-                    alert('⚠️ This participant is NOT eligible. Please correct the Screening form first.');
-                    window.location.href = '/form/screening';
-                    return;
-                }
-                $('#screening_id').val(sd.screening_id);
-                $('#facility').val(sd.facility);
-                $('#dob').val(sd.dob);
-                $('#age_years').val(sd.age_years);
-                $('#age_months').val(sd.age_months);
-
-                $.getJSON('/api/fetch/closeout/' + activeId, function(cres) {
-                    if (cres.success && cres.data) {
-                        var d = cres.data;
-                        Object.keys(d).forEach(function(k) {
-                            var field = $('#closeoutForm #' + k);
-                            if (field.length) field.val(d[k]);
-                        });
-                    }
-                }).fail(function() {});
-                $('#auditReasonBlock').removeClass('d-none');
-                loadAuditLogs(activeId, '#closeoutAuditLogs');
-                setEditMode(false);
-            } else {
-                alert('Screening record not found.');
-                localStorage.removeItem('cached_screening_id');
-                window.location.href = '/form/screening';
-            }
-        }).fail(function() {
-            alert('Error loading screening data.');
-            localStorage.removeItem('cached_screening_id');
-            window.location.href = '/form/screening';
-        });
-    }
+    $('#clearBtn').click(clearCloseoutForm);
 
     $(document).ready(function() {
-        clearCloseoutForm();
         loadCloseoutData();
     });
 
@@ -230,7 +239,7 @@
                     var sd = res.data;
                     if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
                         sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
-                        alert('⚠️ Cannot save Closeout – participant is NOT eligible.');
+                        alert('⚠️ Cannot save – participant is NOT eligible.');
                         window.location.href = '/form/screening';
                         return;
                     }
@@ -250,8 +259,10 @@
             contentType: 'application/json',
             data: JSON.stringify(p),
             success: function() {
-                alert('Closeout changes saved.');
-                loadCloseoutData();
+                alert('Closeout saved.');
+                localStorage.removeItem('cached_screening_id');
+                localStorage.removeItem('cached_height');
+                window.location.href = '/form/screening';
             },
             error: function(xhr) {
                 alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
