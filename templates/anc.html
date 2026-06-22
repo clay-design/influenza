@@ -139,9 +139,9 @@
 </div>
 
 <script>
+    console.log("ANC page loaded");
     var isEditMode = false;
 
-    // Silent reset
     function resetAncForm() {
         $('#ancForm')[0].reset();
         $('#screening_id').val('');
@@ -165,14 +165,12 @@
         setEditMode(true);
     }
 
-    // Clear button
     function clearAncForm() {
         if (!confirm('Clear all data? This will reset the form completely.')) return;
         resetAncForm();
         alert('Form cleared.');
     }
 
-    // Toggle edit mode
     function setEditMode(enable) {
         isEditMode = enable;
         var fields = $('.edit-field');
@@ -180,6 +178,8 @@
         var toggleBtn = $('#toggleEditBtn');
         var cancelBtn = $('#cancelEditBtn');
         var modeIndicator = $('#modeIndicator');
+
+        console.log("setEditMode called with:", enable);
         if (enable) {
             fields.prop('readonly', false).prop('disabled', false);
             fields.filter('select').prop('disabled', false);
@@ -199,15 +199,16 @@
         }
     }
 
-    // Load data
     function loadAncData() {
         var activeId = localStorage.getItem('cached_screening_id');
+        console.log("loadAncData, activeId:", activeId);
         if (!activeId) {
             resetAncForm();
             setEditMode(true);
             return;
         }
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
                 var sd = sres.data;
                 if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
@@ -235,8 +236,8 @@
                     });
                 }
 
-                // Load ANC history
                 $.getJSON('/api/fetch/anc/' + activeId, function(ares) {
+                    console.log("ANC history response:", ares);
                     if (ares.success && ares.data) {
                         var h = '';
                         ares.data.forEach(function(r) {
@@ -247,17 +248,18 @@
                         });
                         $('#tblAncHistoryRows').html(h);
                     }
-                }).fail(function() {});
+                }).fail(function() { console.log("ANC fetch failed"); });
 
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#ancAuditLogs');
-                setEditMode(false);
+                setEditMode(true);
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetAncForm();
                 setEditMode(true);
             }
         }).fail(function() {
+            console.log("Screening lookup failed");
             localStorage.removeItem('cached_screening_id');
             resetAncForm();
             setEditMode(true);
@@ -273,8 +275,8 @@
         });
     }
 
-    // Event handlers
     $('#toggleEditBtn').click(function() {
+        console.log("Edit button clicked, isEditMode:", isEditMode);
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
                 loadAncData();
@@ -295,10 +297,11 @@
     $('#clearBtn').click(clearAncForm);
 
     $(document).ready(function() {
+        console.log("Document ready");
+        setEditMode(true);
         loadAncData();
     });
 
-    // Submit handler
     $('#ancForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');

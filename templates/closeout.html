@@ -111,6 +111,7 @@
 </div>
 
 <script>
+    console.log("Closeout page loaded");
     var isEditMode = false;
 
     function resetCloseoutForm() {
@@ -140,6 +141,8 @@
         var toggleBtn = $('#toggleEditBtn');
         var cancelBtn = $('#cancelEditBtn');
         var modeIndicator = $('#modeIndicator');
+
+        console.log("setEditMode called with:", enable);
         if (enable) {
             fields.prop('readonly', false).prop('disabled', false);
             fields.filter('select').prop('disabled', false);
@@ -159,12 +162,14 @@
 
     function loadCloseoutData() {
         var activeId = localStorage.getItem('cached_screening_id');
+        console.log("loadCloseoutData, activeId:", activeId);
         if (!activeId) {
             resetCloseoutForm();
             setEditMode(true);
             return;
         }
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
                 var sd = sres.data;
                 if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
@@ -179,8 +184,8 @@
                 $('#age_years').val(sd.age_years);
                 $('#age_months').val(sd.age_months);
 
-                // Load closeout record if exists
                 $.getJSON('/api/fetch/closeout/' + activeId, function(cres) {
+                    console.log("Closeout data response:", cres);
                     if (cres.success && cres.data) {
                         var d = cres.data;
                         Object.keys(d).forEach(function(k) {
@@ -188,25 +193,26 @@
                             if (field.length) field.val(d[k]);
                         });
                     }
-                }).fail(function() {});
+                }).fail(function() { console.log("Closeout fetch failed"); });
 
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#closeoutAuditLogs');
-                setEditMode(false);
+                setEditMode(true);
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetCloseoutForm();
                 setEditMode(true);
             }
         }).fail(function() {
+            console.log("Screening lookup failed");
             localStorage.removeItem('cached_screening_id');
             resetCloseoutForm();
             setEditMode(true);
         });
     }
 
-    // Event handlers
     $('#toggleEditBtn').click(function() {
+        console.log("Edit button clicked, isEditMode:", isEditMode);
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
                 loadCloseoutData();
@@ -227,10 +233,11 @@
     $('#clearBtn').click(clearCloseoutForm);
 
     $(document).ready(function() {
+        console.log("Document ready");
+        setEditMode(true);
         loadCloseoutData();
     });
 
-    // Submit handler
     $('#closeoutForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');

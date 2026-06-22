@@ -12,7 +12,6 @@
         </span>
     </div>
     <form id="enrolmentForm" autocomplete="off">
-        <!-- ALL FIELDS (same as before) – keep your existing field markup -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Screening ID</label>
@@ -276,8 +275,6 @@
 
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#enrolmentAuditLogs');
-
-                // **FORCE EDIT MODE FOR TESTING**
                 setEditMode(true);
             } else {
                 localStorage.removeItem('cached_screening_id');
@@ -315,10 +312,8 @@
 
     $(document).ready(function() {
         console.log("Document ready");
+        setEditMode(true);
         loadEnrolmentData();
-        // Also check role:
-        var userRole = '{{ session.get('user', {}).get('role') }}';
-        console.log("User role from template:", userRole);
     });
 
     $('#enrolmentForm').submit(function(e) {

@@ -218,6 +218,7 @@
 </div>
 
 <script>
+    console.log("Delivery page loaded");
     var isEditMode = false;
 
     function resetDeliveryForm() {
@@ -271,6 +272,8 @@
         var toggleBtn = $('#toggleEditBtn');
         var cancelBtn = $('#cancelEditBtn');
         var modeIndicator = $('#modeIndicator');
+
+        console.log("setEditMode called with:", enable);
         if (enable) {
             fields.prop('readonly', false).prop('disabled', false);
             fields.filter('select').prop('disabled', false);
@@ -302,12 +305,14 @@
 
     function loadDeliveryData() {
         var activeId = localStorage.getItem('cached_screening_id');
+        console.log("loadDeliveryData, activeId:", activeId);
         if (!activeId) {
             resetDeliveryForm();
             setEditMode(true);
             return;
         }
         $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            console.log("Screening data response:", sres);
             if (sres.success && sres.data) {
                 var sd = sres.data;
                 if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
@@ -323,8 +328,8 @@
                 $('#age_months').val(sd.age_months);
                 localStorage.setItem('cached_height', sd.height);
 
-                // Load delivery record if exists
                 $.getJSON('/api/fetch/delivery/' + activeId, function(dres) {
+                    console.log("Delivery data response:", dres);
                     if (dres.success && dres.data) {
                         var d = dres.data;
                         Object.keys(d).forEach(function(k) {
@@ -335,25 +340,26 @@
                         });
                         if (d.mother_weight) calculateBmi();
                     }
-                }).fail(function() {});
+                }).fail(function() { console.log("Delivery fetch failed"); });
 
                 $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#deliveryAuditLogs');
-                setEditMode(false);
+                setEditMode(true);
             } else {
                 localStorage.removeItem('cached_screening_id');
                 resetDeliveryForm();
                 setEditMode(true);
             }
         }).fail(function() {
+            console.log("Screening lookup failed");
             localStorage.removeItem('cached_screening_id');
             resetDeliveryForm();
             setEditMode(true);
         });
     }
 
-    // Event handlers
     $('#toggleEditBtn').click(function() {
+        console.log("Edit button clicked, isEditMode:", isEditMode);
         if (isEditMode) {
             if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
                 loadDeliveryData();
@@ -374,11 +380,12 @@
     $('#clearBtn').click(clearDeliveryForm);
 
     $(document).ready(function() {
+        console.log("Document ready");
+        setEditMode(true);
         loadDeliveryData();
         $('#mother_weight').on('input', calculateBmi);
     });
 
-    // Submit handler
     $('#deliveryForm').submit(function(e) {
         e.preventDefault();
         var activeId = localStorage.getItem('cached_screening_id');
