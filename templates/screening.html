@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-clipboard-check text-primary me-2"></i>Form 1: Screening</h3>
+        <span class="badge-modern">
+            {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                <span id="modeIndicator">View Mode</span>
+            {% else %}
+                <i class="fa fa-eye"></i> View‑Only
+            {% endif %}
+        </span>
+    </div>
+    <form id="screeningForm" autocomplete="off">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Facility</label>
+                <select id="facility" class="form-select edit-field" required>
+                    <option value="">-- Select Facility --</option>
+                    <option value="Bondo">Bondo</option>
+                    <option value="Siaya">Siaya</option>
+                    <option value="Kuoyo">Kuoyo</option>
+                    <option value="Lumumba">Lumumba</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Screening ID</label>
+                <div class="input-group">
+                    <input type="text" id="screening_id" class="form-control bg-light font-monospace fw-bold text-danger" readonly required>
+                    <button class="btn btn-outline-secondary" type="button" id="refreshIdBtn"><i class="fa fa-rotate"></i></button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Interview Date</label>
+                <input type="date" id="date_interview" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Maternal DOB</label>
+                <input type="date" id="dob" class="form-control edit-field" min="1970-01-01" max="2012-01-01" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Age (Years)</label>
+                <input type="number" id="age_years" class="form-control bg-light fw-bold" readonly>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Age (Months)</label>
+                <input type="number" id="age_months" class="form-control bg-light fw-bold" readonly>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Height (cm)</label>
+                <input type="number" step="0.1" id="height" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" step="0.1" id="weight" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Temperature (°C)</label>
+                <input type="number" step="0.1" id="temperature" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Temp Method</label>
+                <select id="temp_method" class="form-select edit-field" required>
+                    <option value="Axillary">Axillary</option>
+                    <option value="Oral">Oral</option>
+                    <option value="Tympanic">Tympanic</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Respiratory Rate</label>
+                <input type="number" id="resp_rate" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Pulse Rate</label>
+                <input type="number" id="pulse_rate" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Systolic</label>
+                <input type="number" id="bp_systolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Diastolic</label>
+                <input type="number" id="bp_diastolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">LMP</label>
+                <input type="date" id="lmp" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Fundal Height (cm)</label>
+                <input type="number" step="0.1" id="fundal_height" class="form-control edit-field" required>
+            </div>
+        </div>
+        <h5 class="mt-4 text-secondary border-bottom pb-2 fw-bold">Inclusion / Exclusion</h5>
+        <div class="row g-3">
+            <div class="col-md-6 bg-light p-3 rounded border">
+                <h6 class="text-success fw-bold">Inclusion (all must be checked)</h6>
+                <div class="form-check mb-2"><input type="checkbox" id="inc_resident" class="form-check-input edit-field" required><label class="form-check-label">Resident in catchment</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="inc_pregnancy" class="form-check-input edit-field" required><label class="form-check-label">Confirmed pregnancy</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="inc_gestation" class="form-check-input edit-field" required><label class="form-check-label">Gestation < 31 weeks</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="inc_hiv" class="form-check-input edit-field" required><label class="form-check-label">Consents to testing</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="inc_delivery" class="form-check-input edit-field" required><label class="form-check-label">Plans facility delivery</label></div>
+            </div>
+            <div class="col-md-6 bg-light p-3 rounded border">
+                <h6 class="text-danger fw-bold">Exclusion (all must be unchecked)</h6>
+                <div class="form-check mb-2"><input type="checkbox" id="exc_multiple" class="form-check-input edit-field"><label class="form-check-label">Multiple gestation</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="exc_fistula" class="form-check-input edit-field"><label class="form-check-label">Fistula / spinal issues</label></div>
+                <div class="form-check mb-2"><input type="checkbox" id="exc_mental" class="form-check-input edit-field"><label class="form-check-label">Cannot consent</label></div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Eligibility</label>
+                <select id="eligibility" class="form-select edit-field fw-bold text-primary" required>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Consent</label>
+                <select id="consent" class="form-select edit-field fw-bold text-primary" required>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">If No, reason</label>
+                <input type="text" id="consent_reason" class="form-control edit-field">
+            </div>
+        </div>
+        <div id="ineligibilityWarning" class="mt-3 alert alert-danger d-none">
+            <i class="fa fa-exclamation-circle"></i> <strong>Participant is NOT eligible.</strong><br>
+            Please ensure:
+            <ul class="mb-0 mt-1">
+                <li>Eligibility = <strong>Yes</strong></li>
+                <li>Consent = <strong>Yes</strong></li>
+                <li>No Exclusion criteria are checked</li>
+            </ul>
+        </div>
+        <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
+            <label class="form-label text-warning fw-bold"><i class="fa fa-exclamation-triangle"></i> Modification Reason</label>
+            <input type="text" id="change_reason" class="form-control" placeholder="e.g., Corrected height measurement">
+        </div>
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <div>
+                <button type="button" class="btn btn-secondary disabled"><i class="fa fa-home"></i> Baseline</button>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="button" id="toggleEditBtn" class="btn btn-outline-primary ms-2"><i class="fa fa-pen"></i> Edit</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary ms-2 d-none"><i class="fa fa-times"></i> Cancel</button>
+                    <button type="button" class="btn btn-outline-danger ms-2" id="clearScreeningBtn"><i class="fa fa-eraser"></i> Clear Form</button>
+                {% endif %}
+            </div>
+            <div>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="submit" id="saveBtn" class="btn btn-primary px-4 fw-bold" disabled>Save Changes</button>
+                {% else %}
+                    <span class="bg-light border rounded px-4 py-2 text-muted"><i class="fa fa-eye"></i> View‑only</span>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- AUDIT LOG SECTION -->
+    <div class="mt-5 pt-3 border-top">
+        <h5 class="fw-bold text-secondary"><i class="fa fa-history me-2"></i>Edit History</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover small">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Changes</th>
+                        <th>Reason</th>
+                        <th>User</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="screeningAuditLogs">
+                    <tr><td colspan="6" class="text-muted">Loading audit logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var isEditMode = false;
+
+    function setEditMode(enable) {
+        isEditMode = enable;
+        var editFields = $('.edit-field');
+        var saveBtn = $('#saveBtn');
+        var toggleBtn = $('#toggleEditBtn');
+        var cancelBtn = $('#cancelEditBtn');
+        var modeIndicator = $('#modeIndicator');
+
+        if (enable) {
+            editFields.prop('readonly', false).prop('disabled', false);
+            editFields.filter('select').prop('disabled', false);
+            editFields.filter(':checkbox').prop('disabled', false);
+            saveBtn.prop('disabled', false);
+            modeIndicator.text('Edit Mode').css('color', 'orange');
+            toggleBtn.html('<i class="fa fa-eye"></i> View');
+            cancelBtn.removeClass('d-none');
+        } else {
+            editFields.prop('readonly', true).prop('disabled', true);
+            editFields.filter('select').prop('disabled', true);
+            editFields.filter(':checkbox').prop('disabled', true);
+            saveBtn.prop('disabled', true);
+            modeIndicator.text('View Mode').css('color', '');
+            toggleBtn.html('<i class="fa fa-pen"></i> Edit');
+            cancelBtn.addClass('d-none');
+        }
+    }
+
+    $('#toggleEditBtn').click(function() {
+        if (isEditMode) {
+            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
+                loadScreeningData();
+                setEditMode(false);
+            }
+        } else {
+            setEditMode(true);
+        }
+    });
+
+    $('#cancelEditBtn').click(function() {
+        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
+            loadScreeningData();
+            setEditMode(false);
+        }
+    });
+
+    $('#date_interview').val(new Date().toISOString().substring(0,10));
+
+    function generateScreeningId(facility) {
+        if (!facility) { $('#screening_id').val(''); return; }
+        $.getJSON('/api/generate_id?facility=' + facility, function(r) {
+            if (r.success) $('#screening_id').val(r.screening_id);
+            else alert('ID generation failed: ' + r.message);
+        }).fail(function() { alert('Server error – cannot generate ID.'); });
+    }
+
+    function clearScreeningForm() {
+        if (!confirm('Clear all data? This will reset the form completely.')) return;
+        $('#screeningForm')[0].reset();
+        $('#screening_id').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#lmp').val('');
+        $('#fundal_height').val('');
+        $('input[type="checkbox"]').prop('checked', false);
+        $('#facility').val('');
+        $('#date_interview').val(new Date().toISOString().substring(0,10));
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        localStorage.removeItem('cached_height');
+        localStorage.removeItem('cached_screening_id');
+        setEditMode(false);
+        alert('Form cleared.');
+    }
+
+    function loadScreeningData() {
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) {
+            clearScreeningForm();
+            return;
+        }
+        $.getJSON('/api/lookup/screening/' + activeId, function(res) {
+            if (res.success && res.data) {
+                var d = res.data;
+                $('#facility').val(d.facility);
+                $('#screening_id').val(d.screening_id);
+                $('#dob').val(d.dob);
+                $('#age_years').val(d.age_years);
+                $('#age_months').val(d.age_months);
+                $('#height').val(d.height);
+                $('#weight').val(d.weight);
+                $('#temperature').val(d.temperature);
+                $('#temp_method').val(d.temp_method);
+                $('#resp_rate').val(d.resp_rate);
+                $('#pulse_rate').val(d.pulse_rate);
+                $('#bp_systolic').val(d.bp_systolic);
+                $('#bp_diastolic').val(d.bp_diastolic);
+                $('#lmp').val(d.lmp);
+                $('#fundal_height').val(d.fundal_height);
+                $('#eligibility').val(d.eligibility);
+                $('#consent').val(d.consent);
+                $('#consent_reason').val(d.consent_reason);
+                $('#inc_resident').prop('checked', d.inc_resident === 'Yes');
+                $('#inc_pregnancy').prop('checked', d.inc_pregnancy === 'Yes');
+                $('#inc_gestation').prop('checked', d.inc_gestation === 'Yes');
+                $('#inc_hiv').prop('checked', d.inc_hiv === 'Yes');
+                $('#inc_delivery').prop('checked', d.inc_delivery === 'Yes');
+                $('#exc_multiple').prop('checked', d.exc_multiple === 'Yes');
+                $('#exc_fistula').prop('checked', d.exc_fistula === 'Yes');
+                $('#exc_mental').prop('checked', d.exc_mental === 'Yes');
+                localStorage.setItem('cached_height', d.height);
+                checkEligibility();
+                $('#auditReasonBlock').removeClass('d-none');
+                loadAuditLogs(activeId, '#screeningAuditLogs');
+                setEditMode(false);
+            } else {
+                clearScreeningForm();
+                localStorage.removeItem('cached_screening_id');
+            }
+        }).fail(function() { clearScreeningForm(); });
+    }
+
+    function checkEligibility() {
+        var exclusionChecked = $('#exc_multiple').is(':checked') ||
+                              $('#exc_fistula').is(':checked') ||
+                              $('#exc_mental').is(':checked');
+        var eligibilityVal = $('#eligibility').val();
+        var consentVal = $('#consent').val();
+        var isEligible = (eligibilityVal === 'Yes') &&
+                         (consentVal === 'Yes') &&
+                         (!exclusionChecked);
+        if (!isEligible) {
+            $('#ineligibilityWarning').removeClass('d-none');
+        } else {
+            $('#ineligibilityWarning').addClass('d-none');
+        }
+    }
+
+    $(document).on('change', 'input[type="checkbox"], #eligibility, #consent', checkEligibility);
+
+    $(document).ready(function() {
+        loadScreeningData();
+        var facility = $('#facility').val();
+        if (facility) generateScreeningId(facility);
+        $('#clearScreeningBtn').click(clearScreeningForm);
+    });
+
+    $('#facility').change(function() { generateScreeningId($(this).val()); });
+    $('#refreshIdBtn').click(function() {
+        var facility = $('#facility').val();
+        if (facility) generateScreeningId(facility);
+        else alert('Select a facility first.');
+    });
+    $('#dob').change(function() {
+        var b = new Date($(this).val());
+        if (isNaN(b.getTime())) return;
+        var today = new Date();
+        var diff = today - b;
+        var totalMonths = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.4375));
+        $('#age_years').val(Math.floor(totalMonths / 12));
+        $('#age_months').val(totalMonths % 12);
+    });
+
+    $('#screeningForm').submit(function(e) {
+        e.preventDefault();
+        var exclusionChecked = $('#exc_multiple').is(':checked') ||
+                              $('#exc_fistula').is(':checked') ||
+                              $('#exc_mental').is(':checked');
+        if (exclusionChecked || $('#eligibility').val() !== 'Yes' || $('#consent').val() !== 'Yes') {
+            alert('Cannot save – participant is not eligible. Please ensure:\n- Eligibility = Yes\n- Consent = Yes\n- No exclusion criteria checked');
+            return;
+        }
+        var p = {};
+        $('#screeningForm').find('input, select').each(function() {
+            var id = $(this).attr('id');
+            if (id) {
+                if ($(this).attr('type') === 'checkbox') {
+                    p[id] = $(this).is(':checked') ? 'Yes' : 'No';
+                } else {
+                    p[id] = $(this).val();
+                }
+            }
+        });
+        var sid = $('#screening_id').val();
+        if (!sid) { alert('Screening ID is required.'); return; }
+        localStorage.setItem('cached_screening_id', sid);
+        $.ajax({
+            url: '/api/submit/screening',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(p),
+            success: function() {
+                alert('Screening changes saved.');
+                loadScreeningData();
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
+            }
+        });
+    });
+</script>
+{% endblock %}

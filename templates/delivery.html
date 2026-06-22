@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-baby text-info me-2"></i>Form 4: Delivery</h3>
+        <span class="badge-modern">
+            {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                <span id="modeIndicator">View Mode</span>
+            {% else %}
+                <i class="fa fa-eye"></i> View‑Only
+            {% endif %}
+        </span>
+    </div>
+    <form id="deliveryForm" autocomplete="off">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Screening ID</label>
+                <input type="text" id="screening_id" class="form-control font-monospace fw-bold" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Facility</label>
+                <input type="text" id="facility" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Maternal DOB</label>
+                <input type="date" id="dob" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <div class="row">
+                    <div class="col-6"><label class="form-label">Age (Yrs)</label><input type="number" id="age_years" class="form-control bg-light" readonly></div>
+                    <div class="col-6"><label class="form-label">Age (Mths)</label><input type="number" id="age_months" class="form-control bg-light" readonly></div>
+                </div>
+            </div>
+            <hr class="my-2">
+            <div class="col-md-3">
+                <label class="form-label">Interview Date</label>
+                <input type="date" id="date_interview" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Mother Weight (kg)</label>
+                <input type="number" step="0.1" id="mother_weight" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Temperature (°C)</label>
+                <input type="number" step="0.1" id="vital_temp" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Temp Method</label>
+                <input type="text" id="vital_temp_method" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Respiratory Rate</label>
+                <input type="number" id="vital_rr" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Heart Rate</label>
+                <input type="number" id="vital_hr" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">BP Systolic</label>
+                <input type="number" id="bp_systolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">BP Diastolic</label>
+                <input type="number" id="bp_diastolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">O₂ Saturation (%)</label>
+                <input type="number" id="oxygen_sat" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Oxygen Support</label>
+                <select id="oxygen_supp" class="form-select edit-field">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-info">BMI (auto‑calculated)</label>
+                <input type="number" step="0.01" id="bmi_calc" class="form-control bg-light fw-bold" readonly>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Abnormal Exam</label>
+                <select id="abnormal_exam" class="form-select edit-field">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Specify Abnormal Findings</label>
+                <input type="text" id="abnormal_specify" class="form-control edit-field">
+            </div>
+            <hr class="my-4">
+            <div class="col-md-3">
+                <label class="form-label">Delivery Date</label>
+                <input type="date" id="delivery_date" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Delivery Time</label>
+                <input type="time" id="delivery_time" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Location</label>
+                <select id="delivery_location" class="form-select edit-field">
+                    <option value="Study Site Labor Room">Study Site</option>
+                    <option value="Home/Transit">Home/Transit</option>
+                    <option value="Other Facility">Other Facility</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Other Location</label>
+                <input type="text" id="delivery_location_other" class="form-control edit-field">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Provider</label>
+                <select id="delivery_provider" class="form-select edit-field">
+                    <option value="Obstetrician / Medical Officer">Obstetrician / MO</option>
+                    <option value="Surveillance Nurse Midwife">Nurse Midwife</option>
+                    <option value="TBA/Relative">TBA/Relative</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Other Provider</label>
+                <input type="text" id="delivery_provider_other" class="form-control edit-field">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Mode of Delivery</label>
+                <select id="mode_delivery" class="form-select edit-field">
+                    <option value="SVD">SVD</option>
+                    <option value="Breech">Breech</option>
+                    <option value="Caesarean Section">Caesarean Section</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">C‑Section Indication</label>
+                <select id="csection_indication" class="form-select edit-field">
+                    <option value="Not Applicable">N/A</option>
+                    <option value="Fetal Distress">Fetal Distress</option>
+                    <option value="Obstructed Labor">Obstructed Labor</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Specify Indication</label>
+                <input type="text" id="csection_indication_other" class="form-control edit-field">
+            </div>
+            <hr class="my-3">
+            <div class="col-md-3">
+                <label class="form-label">Birth Weight (g)</label>
+                <input type="number" step="1" id="birth_weight_g" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Infant Sex</label>
+                <select id="infant_sex" class="form-select edit-field">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Infant Status</label>
+                <select id="infant_status" class="form-select edit-field">
+                    <option value="Live Birth">Live Birth</option>
+                    <option value="Fresh Still Birth">FSB</option>
+                    <option value="Macerated Still Birth">MSB</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Birth Asphyxia</label>
+                <select id="birth_asphyxia" class="form-select edit-field">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
+            <label class="form-label text-warning fw-bold">Modification Reason</label>
+            <input type="text" id="change_reason" class="form-control" placeholder="e.g., Corrected birth weight">
+        </div>
+        <div class="d-flex justify-content-between mt-5 pt-3 border-top">
+            <div>
+                <a href="/form/anc" class="btn btn-outline-secondary fw-bold"><i class="fa fa-chevron-left"></i> Back</a>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="button" id="toggleEditBtn" class="btn btn-outline-primary ms-2"><i class="fa fa-pen"></i> Edit</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary ms-2 d-none"><i class="fa fa-times"></i> Cancel</button>
+                {% endif %}
+            </div>
+            <div>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="submit" id="saveBtn" class="btn btn-info px-4 fw-bold text-dark" disabled>Save Changes</button>
+                {% else %}
+                    <span class="bg-light border rounded px-4 py-2 text-muted"><i class="fa fa-eye"></i> View‑only</span>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <div class="mt-5 pt-3 border-top">
+        <h5 class="fw-bold text-secondary"><i class="fa fa-history me-2"></i>Edit History</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover small">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Changes</th>
+                        <th>Reason</th>
+                        <th>User</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="deliveryAuditLogs">
+                    <tr><td colspan="6" class="text-muted">Loading audit logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var isEditMode = false;
+
+    function setEditMode(enable) {
+        isEditMode = enable;
+        var editFields = $('.edit-field');
+        var saveBtn = $('#saveBtn');
+        var toggleBtn = $('#toggleEditBtn');
+        var cancelBtn = $('#cancelEditBtn');
+        var modeIndicator = $('#modeIndicator');
+
+        if (enable) {
+            editFields.prop('readonly', false).prop('disabled', false);
+            editFields.filter('select').prop('disabled', false);
+            saveBtn.prop('disabled', false);
+            modeIndicator.text('Edit Mode').css('color', 'orange');
+            toggleBtn.html('<i class="fa fa-eye"></i> View');
+            cancelBtn.removeClass('d-none');
+        } else {
+            editFields.prop('readonly', true).prop('disabled', true);
+            editFields.filter('select').prop('disabled', true);
+            saveBtn.prop('disabled', true);
+            modeIndicator.text('View Mode').css('color', '');
+            toggleBtn.html('<i class="fa fa-pen"></i> Edit');
+            cancelBtn.addClass('d-none');
+        }
+    }
+
+    $('#toggleEditBtn').click(function() {
+        if (isEditMode) {
+            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
+                loadDeliveryData();
+                setEditMode(false);
+            }
+        } else {
+            setEditMode(true);
+        }
+    });
+
+    $('#cancelEditBtn').click(function() {
+        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
+            loadDeliveryData();
+            setEditMode(false);
+        }
+    });
+
+    function calculateBmi() {
+        var kg = parseFloat($('#mother_weight').val() || 0);
+        var heightCm = parseFloat(localStorage.getItem('cached_height') || 0);
+        if (kg > 0 && heightCm > 0) {
+            var htM = heightCm / 100;
+            var bmi = kg / (htM * htM);
+            $('#bmi_calc').val(bmi.toFixed(2));
+        } else {
+            $('#bmi_calc').val('');
+        }
+    }
+
+    function clearDeliveryForm() {
+        $('#deliveryForm')[0].reset();
+        $('#screening_id').val('');
+        $('#facility').val('');
+        $('#dob').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#mother_weight').val('');
+        $('#vital_temp').val('');
+        $('#vital_temp_method').val('');
+        $('#vital_rr').val('');
+        $('#vital_hr').val('');
+        $('#bp_systolic').val('');
+        $('#bp_diastolic').val('');
+        $('#oxygen_sat').val('');
+        $('#bmi_calc').val('');
+        $('#abnormal_exam').val('No');
+        $('#abnormal_specify').val('');
+        $('#delivery_date').val(new Date().toISOString().substring(0,10));
+        $('#delivery_time').val('');
+        $('#delivery_location').val('Study Site Labor Room');
+        $('#delivery_location_other').val('');
+        $('#delivery_provider').val('Obstetrician / Medical Officer');
+        $('#delivery_provider_other').val('');
+        $('#mode_delivery').val('SVD');
+        $('#csection_indication').val('Not Applicable');
+        $('#csection_indication_other').val('');
+        $('#birth_weight_g').val('');
+        $('#infant_sex').val('Male');
+        $('#infant_status').val('Live Birth');
+        $('#birth_asphyxia').val('No');
+        $('#date_interview').val(new Date().toISOString().substring(0,10));
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        setEditMode(false);
+    }
+
+    function loadDeliveryData() {
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { clearDeliveryForm(); return; }
+
+        $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            if (sres.success && sres.data) {
+                var sd = sres.data;
+                if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                    sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                    alert('⚠️ This participant is NOT eligible. Please correct the Screening form first.');
+                    window.location.href = '/form/screening';
+                    return;
+                }
+                $('#screening_id').val(sd.screening_id);
+                $('#facility').val(sd.facility);
+                $('#dob').val(sd.dob);
+                $('#age_years').val(sd.age_years);
+                $('#age_months').val(sd.age_months);
+                localStorage.setItem('cached_height', sd.height);
+
+                $.getJSON('/api/fetch/delivery/' + activeId, function(dres) {
+                    if (dres.success && dres.data) {
+                        var d = dres.data;
+                        Object.keys(d).forEach(function(k) {
+                            var field = $('#deliveryForm #' + k);
+                            if (field.length && field.attr('type') !== 'checkbox') {
+                                field.val(d[k]);
+                            }
+                        });
+                        if (d.mother_weight) calculateBmi();
+                    }
+                }).fail(function() {});
+                $('#auditReasonBlock').removeClass('d-none');
+                loadAuditLogs(activeId, '#deliveryAuditLogs');
+                setEditMode(false);
+            } else {
+                alert('Screening record not found.');
+                localStorage.removeItem('cached_screening_id');
+                window.location.href = '/form/screening';
+            }
+        }).fail(function() {
+            alert('Error loading screening data.');
+            localStorage.removeItem('cached_screening_id');
+            window.location.href = '/form/screening';
+        });
+    }
+
+    $(document).ready(function() {
+        clearDeliveryForm();
+        loadDeliveryData();
+        $('#mother_weight').on('input', calculateBmi);
+    });
+
+    $('#deliveryForm').submit(function(e) {
+        e.preventDefault();
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { alert('No active session.'); window.location.href = '/form/screening'; return; }
+        $.ajax({
+            url: '/api/lookup/screening/' + activeId,
+            type: 'GET',
+            async: false,
+            success: function(res) {
+                if (res.success && res.data) {
+                    var sd = res.data;
+                    if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                        sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                        alert('⚠️ Cannot save Delivery – participant is NOT eligible.');
+                        window.location.href = '/form/screening';
+                        return;
+                    }
+                }
+            },
+            error: function() { alert('Error verifying eligibility.'); }
+        });
+        var p = {};
+        $('#deliveryForm').find('input, select').each(function() {
+            var id = $(this).attr('id');
+            if (id) p[id] = $(this).val();
+        });
+        p.screening_id = activeId;
+        $.ajax({
+            url: '/api/submit/delivery',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(p),
+            success: function() {
+                alert('Delivery changes saved.');
+                loadDeliveryData();
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
+            }
+        });
+    });
+</script>
+{% endblock %}

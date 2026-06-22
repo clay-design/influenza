@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEMRI-CGHR Influenza Registry</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <style>
+        :root { --sidebar-width: 270px; --primary-dark: #0b1a2e; --primary-medium: #1a2f44; --accent: #3b9eff; }
+        * { box-sizing: border-box; }
+        body { background: #f4f7fc; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; min-height: 100vh; }
+        .sidebar {
+            position: fixed; top: 0; left: 0; height: 100vh; width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+            color: #e0e9f5; padding: 1.5rem 0; display: flex; flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.2); z-index: 1050; transition: transform 0.3s ease;
+        }
+        .sidebar-brand { padding: 0 1.5rem 0.8rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-brand h4 { color: #fff; font-weight: 700; letter-spacing: -0.5px; }
+        .sidebar-brand small { color: #89b9f0; font-size: 0.75rem; }
+        .sidebar .nav { flex: 1; padding-top: 1rem; }
+        .sidebar .nav-link {
+            color: #b0cae0; padding: 0.7rem 1.8rem; margin: 0.15rem 0.8rem;
+            border-radius: 8px; display: flex; align-items: center; gap: 14px;
+            font-weight: 500; font-size: 0.95rem; transition: all 0.2s;
+        }
+        .sidebar .nav-link i { width: 22px; text-align: center; font-size: 1.1rem; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.08); color: #fff; box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .sidebar .nav-link.active { color: #fff; background: rgba(59,158,255,0.15); }
+        .sidebar-footer {
+            padding: 1rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.8rem; color: #8aa6c9;
+        }
+        .sidebar-footer strong { color: #fff; }
+        .sidebar-footer .btn-logout {
+            background: none; border: none; color: #f78b8b;
+            text-decoration: underline; cursor: pointer; font-size: 0.8rem; padding: 0;
+        }
+        .sidebar-footer .btn-logout:hover { color: #ff5e5e; }
+        .sidebar-footer .btn-start-new {
+            background: #1db954; border: none; color: #fff; font-weight: 600;
+            border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; width: 100%;
+            margin-top: 6px; transition: 0.2s;
+        }
+        .sidebar-footer .btn-start-new:hover { background: #17a44a; }
+        .timeout-display { margin-top: 8px; font-size: 0.8rem; color: #a8c8e8; }
+        .timeout-display .countdown { font-weight: bold; color: #ffd966; }
+        .main-content { margin-left: var(--sidebar-width); padding: 2rem 2.5rem; width: 100%; min-height: 100vh; }
+        .card-modern {
+            border: none; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,20,40,0.06);
+            background: #ffffff; transition: box-shadow 0.2s;
+        }
+        .card-modern:hover { box-shadow: 0 12px 32px rgba(0,20,40,0.10); }
+        .form-label { font-weight: 600; color: #1e3347; font-size: 0.85rem; letter-spacing: 0.3px; }
+        .form-control, .form-select {
+            border: 1px solid #d8e2ed; border-radius: 10px; padding: 0.6rem 1rem;
+            background: #fafcff;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,158,255,0.15);
+        }
+        .btn-primary { background: var(--accent); border: none; font-weight: 600; padding: 0.6rem 1.8rem; border-radius: 10px; }
+        .btn-primary:hover { background: #2a7fd4; }
+        .btn-success { background: #1db954; border: none; font-weight: 600; border-radius: 10px; }
+        .btn-success:hover { background: #17a44a; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.8rem; flex-wrap: wrap; }
+        .page-header h3 { font-weight: 700; color: #0b1a2e; }
+        .badge-modern { background: #e6effa; color: #1a4b7a; padding: 0.4rem 1.2rem; border-radius: 30px; font-weight: 500; font-size: 0.8rem; }
+        .readonly-badge { background: #f8d7da; color: #721c24; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.7rem; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 1.5rem; }
+            .hamburger { display: block; }
+        }
+        .hamburger { display: none; background: none; border: none; font-size: 1.8rem; color: #0b1a2e; padding: 0.2rem 0.5rem; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 1040; }
+        .overlay.active { display: block; }
+        .lock-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .lock-overlay.active { display: flex; }
+        .lock-box {
+            background: #fff;
+            padding: 40px;
+            border-radius: 20px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .lock-box h3 { color: #0b1a2e; margin-bottom: 20px; }
+        .lock-box .form-control { text-align: center; font-size: 1.2rem; }
+        .lock-box .btn-primary { margin-top: 10px; }
+        .lock-error { color: #dc3545; font-size: 0.9rem; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-box">
+            <i class="fa fa-lock fa-3x text-primary mb-3"></i>
+            <h3>Session Locked</h3>
+            <p class="text-muted">Your session expired due to inactivity. Enter your password to unlock.</p>
+            <form id="unlockForm">
+                <input type="password" id="unlockPassword" class="form-control" placeholder="Enter your password" autofocus>
+                <div class="lock-error" id="lockError">Incorrect password. Try again.</div>
+                <button type="submit" class="btn btn-primary w-100 fw-bold">Unlock</button>
+            </form>
+            <button class="btn btn-link btn-sm mt-3 text-danger" onclick="forceLogout()">Logout instead</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h4><i class="fa fa-dna me-2"></i>KEMRI‑CGHR</h4>
+            <small>Influenza Surveillance</small>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="/"><i class="fa fa-th-large"></i> Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="/form/screening"><i class="fa fa-clipboard-check"></i> 1. Screening</a></li>
+            <li class="nav-item"><a class="nav-link" href="/form/enrolment"><i class="fa fa-user-plus"></i> 2. Enrolment</a></li>
+            <li class="nav-item"><a class="nav-link" href="/form/anc"><i class="fa fa-hospital-user"></i> 3. ANC</a></li>
+            <li class="nav-item"><a class="nav-link" href="/form/delivery"><i class="fa fa-baby"></i> 4. Delivery</a></li>
+            <li class="nav-item"><a class="nav-link" href="/form/closeout"><i class="fa fa-folder-minus"></i> 5. Closeout</a></li>
+            {% if session.get('user') and session.get('user', {}).get('role') == 'Super Admin' %}
+                <li class="nav-item"><a class="nav-link text-warning" href="/users"><i class="fa fa-user-shield"></i> Users</a></li>
+                <li class="nav-item"><a class="nav-link" href="/data"><i class="fa fa-database"></i> All Data</a></li>
+            {% endif %}
+        </ul>
+        <div class="sidebar-footer">
+            {% if session.get('user') %}
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-user-circle me-1"></i> {{ session['user']['initials'] }} <span class="text-muted">({{ session['user']['role'] }})</span></span>
+                <button class="btn-logout" onclick="triggerSystemSignout()"><i class="fa fa-power-off"></i> Logout</button>
+            </div>
+            {% if session['user']['role'] in ['Super Admin', 'Data Manager'] %}
+                <button class="btn-start-new" onclick="startNewParticipant()"><i class="fa fa-plus-circle"></i> Start New Participant</button>
+            {% else %}
+                <div class="text-center text-warning small mt-2"><i class="fa fa-eye"></i> View‑only mode</div>
+            {% endif %}
+            <div class="timeout-display">
+                <i class="fa fa-clock me-1"></i> Session expires in: <span class="countdown" id="sessionTimer">20:00</span>
+            </div>
+            {% else %}
+            <div class="text-center text-light small">
+                <a href="/login" class="text-light">Login</a> | <a href="/register" class="text-light">Register</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <button class="hamburger" onclick="toggleSidebar()"><i class="fa fa-bars"></i></button>
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="modal fade" id="timeoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fa fa-exclamation-triangle"></i> Session Expiring</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Your session will expire in <strong><span id="timeoutRemaining">2:00</span></strong> due to inactivity.</p>
+                    <p>Click <strong>Stay Logged In</strong> to continue, or <strong>Logout</strong> to end now.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" onclick="forceLogout()">Logout Now</button>
+                    <button class="btn btn-primary" onclick="resetSessionTimer()">Stay Logged In</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function triggerSystemSignout() {
+            $.ajax({ url: '/api/logout', type: 'POST', success: function() { window.location.href = '/login'; } });
+        }
+        function forceLogout() {
+            $('#timeoutModal').modal('hide');
+            $('#lockOverlay').removeClass('active');
+            triggerSystemSignout();
+        }
+
+        function startNewParticipant() {
+            if (confirm('Start a new participant? Unsaved data will be lost.')) {
+                localStorage.removeItem('cached_screening_id');
+                localStorage.removeItem('cached_height');
+                window.location.href = '/form/screening';
+            }
+        }
+
+        var TOTAL_SESSION_SECONDS = 20 * 60;
+        var remainingSeconds = TOTAL_SESSION_SECONDS;
+        var timerInterval = null;
+        var warningShown = false;
+        var locked = false;
+
+        function updateTimerDisplay() {
+            var mins = Math.floor(remainingSeconds / 60);
+            var secs = remainingSeconds % 60;
+            $('#sessionTimer').text(String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0'));
+            if (warningShown) {
+                $('#timeoutRemaining').text(String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0'));
+            }
+        }
+
+        function resetSessionTimer() {
+            if (locked) return;
+            remainingSeconds = TOTAL_SESSION_SECONDS;
+            warningShown = false;
+            $('#timeoutModal').modal('hide');
+            updateTimerDisplay();
+            if (!timerInterval) startTimerInterval();
+        }
+
+        function startTimerInterval() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(function() {
+                remainingSeconds--;
+                updateTimerDisplay();
+                if (remainingSeconds <= 120 && !warningShown && !locked) {
+                    warningShown = true;
+                    $('#timeoutRemaining').text('2:00');
+                    $('#timeoutModal').modal('show');
+                }
+                if (remainingSeconds <= 0 && !locked) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    showLockScreen();
+                }
+            }, 1000);
+        }
+
+        function showLockScreen() {
+            $('#lockOverlay').addClass('active');
+            locked = true;
+            $('#unlockPassword').val('').focus();
+            $('#lockError').hide();
+        }
+
+        $('#unlockForm').submit(function(e) {
+            e.preventDefault();
+            var password = $('#unlockPassword').val();
+            if (!password) return;
+            $.ajax({
+                url: '/api/verify-password',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ password: password }),
+                success: function(res) {
+                    if (res.success) {
+                        $('#lockOverlay').removeClass('active');
+                        locked = false;
+                        resetSessionTimer();
+                    } else {
+                        $('#lockError').show();
+                        $('#unlockPassword').val('').focus();
+                    }
+                },
+                error: function() {
+                    $('#lockError').show();
+                    $('#unlockPassword').val('').focus();
+                }
+            });
+        });
+
+        $(document).on('mousemove keydown scroll click', function() {
+            if (!locked) resetSessionTimer();
+        });
+
+        $(document).ready(function() {
+            resetSessionTimer();
+            updateTimerDisplay();
+            var path = window.location.pathname;
+            $('.sidebar .nav-link').each(function() {
+                if ($(this).attr('href') === path) $(this).addClass('active');
+            });
+        });
+        function runCrossFormSynchronizationPipeline() {
+            var activeId = localStorage.getItem('cached_screening_id');
+            if (!activeId) return;
+            $('#screening_id').val(activeId);
+            $.getJSON('/api/lookup/screening/' + activeId, function(res) {
+                if (res.success) {
+                    var d = res.data;
+                    $('#facility').val(d.facility);
+                    $('#dob').val(d.dob);
+                    $('#age_years').val(d.age_years);
+                    $('#age_months').val(d.age_months);
+                    if ($('#height').length) $('#height').val(d.height);
+                    if ($('#weight').length) $('#weight').val(d.weight);
+                    if ($('#temperature').length) $('#temperature').val(d.temperature);
+                    if ($('#temp_method').length) $('#temp_method').val(d.temp_method);
+                    if ($('#resp_rate').length) $('#resp_rate').val(d.resp_rate);
+                    if ($('#pulse_rate').length) $('#pulse_rate').val(d.pulse_rate);
+                    if ($('#bp_systolic').length) $('#bp_systolic').val(d.bp_systolic);
+                    if ($('#bp_diastolic').length) $('#bp_diastolic').val(d.bp_diastolic);
+                    localStorage.setItem('cached_height', d.height);
+                    if ($('#fundal_height').length && d.fundal_height) {
+                        $('#fundal_height').val(d.fundal_height);
+                    }
+                    if (typeof pipelineCallbackHook === 'function') pipelineCallbackHook(d);
+                }
+            });
+        }
+
+        function checkExistingRecordModifications(endpointPath, formSelectorId) {
+            var activeId = localStorage.getItem('cached_screening_id');
+            if (!activeId) return;
+            $.getJSON(endpointPath + activeId, function(res) {
+                if (res.success && res.data) {
+                    $('#auditReasonBlock').removeClass('d-none');
+                    $('#change_reason').attr('required', true);
+                    Object.keys(res.data).forEach(function(key) {
+                        var field = $(formSelectorId + ' #' + key);
+                        if (field.length && field.attr('type') !== 'checkbox') {
+                            field.val(res.data[key]);
+                        }
+                    });
+                    if (typeof dataPopulatedCallbackHook === 'function') {
+                        dataPopulatedCallbackHook(res.data);
+                    }
+                }
+            });
+        }
+
+        function loadAuditLogs(screening_id, targetTableId) {
+            if (!screening_id) {
+                $(targetTableId).html('<tr><td colspan="6" class="text-muted">No screening ID provided.</td></tr>');
+                return;
+            }
+            $.getJSON('/api/audit/' + screening_id, function(logs) {
+                if (logs.length === 0) {
+                    $(targetTableId).html('<tr><td colspan="6" class="text-muted">No changes recorded yet.</td></tr>');
+                    return;
+                }
+                var html = '';
+                logs.forEach(function(log) {
+                    var actionBadge = log.action === 'CREATE' ?
+                        '<span class="badge bg-success">Created</span>' :
+                        '<span class="badge bg-warning text-dark">Updated</span>';
+
+                    var oldData = log.old_value ? JSON.parse(log.old_value) : null;
+                    var newData = log.new_value ? JSON.parse(log.new_value) : null;
+
+                    var changesHtml = '';
+                    if (log.action === 'CREATE' && newData) {
+                        var fields = [];
+                        Object.keys(newData).forEach(function(key) {
+                            if (key !== 'screening_id' && key !== 'change_reason' && key !== 'user_initials' && key !== 'timestamp') {
+                                var val = newData[key] || '';
+                                if (typeof val === 'object') val = JSON.stringify(val);
+                                fields.push('<span class="badge bg-light text-dark me-1">' + key + ': ' + val + '</span>');
+                            }
+                        });
+                        changesHtml = fields.join(' ');
+                    } else if (log.action === 'UPDATE' && oldData && newData) {
+                        var changedFields = [];
+                        var allKeys = new Set(Object.keys(oldData).concat(Object.keys(newData)));
+                        allKeys.forEach(function(key) {
+                            if (key === 'screening_id' || key === 'change_reason' || key === 'user_initials' || key === 'timestamp' || key === 'id') return;
+                            var oldVal = oldData[key] || '';
+                            var newVal = newData[key] || '';
+                            if (typeof oldVal === 'object') oldVal = JSON.stringify(oldVal);
+                            if (typeof newVal === 'object') newVal = JSON.stringify(newVal);
+                            if (String(oldVal) !== String(newVal)) {
+                                changedFields.push('<span class="badge bg-light text-dark me-1">' + key + ': <span class="text-danger">' + oldVal + '</span> → <span class="text-success">' + newVal + '</span></span>');
+                            }
+                        });
+                        if (changedFields.length === 0) {
+                            changesHtml = '<span class="text-muted">No visible changes (metadata only)</span>';
+                        } else {
+                            changesHtml = changedFields.join(' ');
+                        }
+                    } else {
+                        changesHtml = '<span class="text-muted">No changes recorded</span>';
+                    }
+
+                    html += '<tr>';
+                    html += '<td>' + actionBadge + '</td>';
+                    html += '<td>' + log.table_name + '</td>';
+                    html += '<td>' + changesHtml + '</td>';
+                    html += '<td><span class="badge bg-info text-dark">' + (log.change_reason || 'N/A') + '</span></td>';
+                    html += '<td><strong>' + log.user_initials + '</strong></td>';
+                    html += '<td class="text-muted small">' + log.timestamp + '</td>';
+                    html += '</tr>';
+                });
+                $(targetTableId).html(html);
+            }).fail(function() {
+                $(targetTableId).html('<tr><td colspan="6" class="text-danger">Error loading audit logs.</td></tr>');
+            });
+        }
+    </script>
+</body>
+</html>

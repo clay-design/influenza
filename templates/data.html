@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-database me-2"></i>All Participant Records</h3>
+        <span class="badge-modern">Super Admin View</span>
+    </div>
+    <div class="mb-3">
+        <input type="text" id="dataSearch" class="form-control" placeholder="Search all records..." oninput="performDataSearch()">
+    </div>
+    <div id="dataResults"></div>
+</div>
+<script>
+    function performDataSearch() {
+        var q = $('#dataSearch').val().trim();
+        if (!q) { $('#dataResults').html('<div class="alert alert-secondary">Enter a search term.</div>'); return; }
+        $.getJSON('/api/search?q=' + encodeURIComponent(q), function(data) {
+            if (data.length === 0) { $('#dataResults').html('<div class="alert alert-info">No records.</div>'); return; }
+            var html = '<div class="table-responsive"><table class="table table-striped table-hover small"><thead><tr><th>ID</th><th>Facility</th><th>DOB</th><th>Age</th><th>Eligible</th><th>Consent</th><th>User</th><th>Timestamp</th></tr></thead><tbody>';
+            data.forEach(function(r) {
+                html += '<tr><td>'+r.screening_id+'</td><td>'+r.facility+'</td><td>'+r.dob+'</td><td>'+r.age_years+'y '+r.age_months+'m</td><td>'+r.eligibility+'</td><td>'+r.consent+'</td><td>'+r.user_initials+'</td><td>'+r.timestamp+'</td></tr>';
+            });
+            html += '</tbody></table></div>';
+            $('#dataResults').html(html);
+        });
+    }
+    $(document).ready(function() { $('#dataSearch').val(''); });
+</script>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-hospital-user text-warning me-2"></i>Form 3: ANC Visits</h3>
+        <span class="badge-modern">
+            {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                <span id="modeIndicator">View Mode</span>
+            {% else %}
+                <i class="fa fa-eye"></i> View‑Only
+            {% endif %}
+        </span>
+    </div>
+    <form id="ancForm" autocomplete="off">
+        <input type="hidden" id="id">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Screening ID</label>
+                <input type="text" id="screening_id" class="form-control font-monospace fw-bold" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Facility</label>
+                <input type="text" id="facility" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Maternal DOB</label>
+                <input type="date" id="dob" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <div class="row">
+                    <div class="col-6"><label class="form-label">Years</label><input type="number" id="age_years" class="form-control bg-light" readonly></div>
+                    <div class="col-6"><label class="form-label">Months</label><input type="number" id="age_months" class="form-control bg-light" readonly></div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="col-md-3">
+                <label class="form-label">Visit Number</label>
+                <select id="visit_number" class="form-select edit-field" required>
+                    <option value="1">1st</option>
+                    <option value="2">2nd</option>
+                    <option value="3">3rd</option>
+                    <option value="4">4th</option>
+                    <option value="5">5th</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Visit Date</label>
+                <input type="date" id="visit_date" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Gestational Age (weeks)</label>
+                <input type="number" step="0.1" id="gestational_age_weeks" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" step="0.1" id="weight" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Systolic</label>
+                <input type="number" id="bp_systolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Diastolic</label>
+                <input type="number" id="bp_diastolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fundal Height (cm)</label>
+                <input type="number" step="0.1" id="fundal_height" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">MUAC (cm)</label>
+                <input type="number" step="0.1" id="muac" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Complaints</label>
+                <textarea id="complaints" class="form-control edit-field" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Medication Given</label>
+                <textarea id="medication_given" class="form-control edit-field" rows="2"></textarea>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Next Appointment</label>
+                <input type="date" id="next_appointment_date" class="form-control edit-field" required>
+            </div>
+        </div>
+        <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
+            <label class="form-label text-warning fw-bold">Modification Reason</label>
+            <input type="text" id="change_reason" class="form-control" placeholder="e.g., Updated GA based on ultrasound">
+        </div>
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <div>
+                <a href="/form/enrolment" class="btn btn-outline-secondary fw-bold"><i class="fa fa-chevron-left"></i> Back</a>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="button" id="toggleEditBtn" class="btn btn-outline-primary ms-2"><i class="fa fa-pen"></i> Edit</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary ms-2 d-none"><i class="fa fa-times"></i> Cancel</button>
+                {% endif %}
+            </div>
+            <div>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="submit" id="saveBtn" class="btn btn-warning px-4 fw-bold text-dark" disabled>Save Changes</button>
+                {% else %}
+                    <span class="bg-light border rounded px-4 py-2 text-muted"><i class="fa fa-eye"></i> View‑only</span>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+    <div class="mt-5">
+        <h5 class="fw-bold text-secondary">Previous ANC Visits</h5>
+        <div class="table-responsive mt-2">
+            <table class="table table-bordered bg-white small">
+                <thead><tr><th>Visit #</th><th>Date</th><th>GA (wks)</th><th>Weight</th><th>BP</th><th>Fundal (cm)</th><th>MUAC</th><th>User</th></tr></thead>
+                <tbody id="tblAncHistoryRows"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AUDIT LOG SECTION -->
+    <div class="mt-5 pt-3 border-top">
+        <h5 class="fw-bold text-secondary"><i class="fa fa-history me-2"></i>Edit History</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover small">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Changes</th>
+                        <th>Reason</th>
+                        <th>User</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="ancAuditLogs">
+                    <tr><td colspan="6" class="text-muted">Loading audit logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var isEditMode = false;
+
+    function setEditMode(enable) {
+        isEditMode = enable;
+        var editFields = $('.edit-field');
+        var saveBtn = $('#saveBtn');
+        var toggleBtn = $('#toggleEditBtn');
+        var cancelBtn = $('#cancelEditBtn');
+        var modeIndicator = $('#modeIndicator');
+
+        if (enable) {
+            editFields.prop('readonly', false).prop('disabled', false);
+            editFields.filter('select').prop('disabled', false);
+            editFields.filter('textarea').prop('disabled', false);
+            saveBtn.prop('disabled', false);
+            modeIndicator.text('Edit Mode').css('color', 'orange');
+            toggleBtn.html('<i class="fa fa-eye"></i> View');
+            cancelBtn.removeClass('d-none');
+        } else {
+            editFields.prop('readonly', true).prop('disabled', true);
+            editFields.filter('select').prop('disabled', true);
+            editFields.filter('textarea').prop('disabled', true);
+            saveBtn.prop('disabled', true);
+            modeIndicator.text('View Mode').css('color', '');
+            toggleBtn.html('<i class="fa fa-pen"></i> Edit');
+            cancelBtn.addClass('d-none');
+        }
+    }
+
+    $('#toggleEditBtn').click(function() {
+        if (isEditMode) {
+            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
+                loadAncData();
+                setEditMode(false);
+            }
+        } else {
+            setEditMode(true);
+        }
+    });
+
+    $('#cancelEditBtn').click(function() {
+        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
+            loadAncData();
+            setEditMode(false);
+        }
+    });
+
+    function clearAncForm() {
+        $('#ancForm')[0].reset();
+        $('#screening_id').val('');
+        $('#facility').val('');
+        $('#dob').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#gestational_age_weeks').val('');
+        $('#weight').val('');
+        $('#bp_systolic').val('');
+        $('#bp_diastolic').val('');
+        $('#fundal_height').val('');
+        $('#muac').val('');
+        $('#complaints').val('');
+        $('#medication_given').val('');
+        $('#next_appointment_date').val('');
+        $('#visit_date').val(new Date().toISOString().substring(0,10));
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        $('#tblAncHistoryRows').html('');
+        setEditMode(false);
+    }
+
+    function loadAncData() {
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { clearAncForm(); return; }
+
+        $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            if (sres.success && sres.data) {
+                var sd = sres.data;
+                if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                    sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                    alert('⚠️ This participant is NOT eligible. Please correct the Screening form first.');
+                    window.location.href = '/form/screening';
+                    return;
+                }
+                $('#screening_id').val(sd.screening_id);
+                $('#facility').val(sd.facility);
+                $('#dob').val(sd.dob);
+                $('#age_years').val(sd.age_years);
+                $('#age_months').val(sd.age_months);
+                if (sd.fundal_height) $('#fundal_height').val(sd.fundal_height);
+                if (sd.lmp) {
+                    $.ajax({
+                        url: '/api/calculate_ga',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({lmp: sd.lmp}),
+                        success: function(gares) {
+                            if (gares.success) $('#gestational_age_weeks').val(gares.ga_weeks);
+                        }
+                    });
+                }
+                $.getJSON('/api/fetch/anc/' + activeId, function(ares) {
+                    if (ares.success && ares.data) {
+                        var h = '';
+                        ares.data.forEach(function(r) {
+                            h += '<tr onclick="populateAncRow(' + JSON.stringify(r).replace(/"/g, '&quot;') + ')" style="cursor:pointer;">';
+                            h += '<td>' + r.visit_number + '</td><td>' + r.visit_date + '</td><td>' + r.gestational_age_weeks + '</td>';
+                            h += '<td>' + r.weight + '</td><td>' + r.bp_systolic + '/' + r.bp_diastolic + '</td>';
+                            h += '<td>' + r.fundal_height + '</td><td>' + r.muac + '</td><td>' + r.user_initials + '</td></tr>';
+                        });
+                        $('#tblAncHistoryRows').html(h);
+                    }
+                }).fail(function() {});
+                $('#auditReasonBlock').removeClass('d-none');
+                loadAuditLogs(activeId, '#ancAuditLogs');
+                setEditMode(false);
+            } else {
+                alert('Screening record not found.');
+                localStorage.removeItem('cached_screening_id');
+                window.location.href = '/form/screening';
+            }
+        }).fail(function() {
+            alert('Error loading screening data.');
+            localStorage.removeItem('cached_screening_id');
+            window.location.href = '/form/screening';
+        });
+    }
+
+    function populateAncRow(obj) {
+        $('#auditReasonBlock').removeClass('d-none');
+        $('#change_reason').attr('required', true);
+        Object.keys(obj).forEach(function(k) {
+            var field = $('#ancForm #' + k);
+            if (field.length) field.val(obj[k]);
+        });
+    }
+
+    $(document).ready(function() {
+        clearAncForm();
+        loadAncData();
+    });
+
+    $('#ancForm').submit(function(e) {
+        e.preventDefault();
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { alert('No active session.'); window.location.href = '/form/screening'; return; }
+        $.ajax({
+            url: '/api/lookup/screening/' + activeId,
+            type: 'GET',
+            async: false,
+            success: function(res) {
+                if (res.success && res.data) {
+                    var sd = res.data;
+                    if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                        sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                        alert('⚠️ Cannot save ANC – participant is NOT eligible.');
+                        window.location.href = '/form/screening';
+                        return;
+                    }
+                }
+            },
+            error: function() { alert('Error verifying eligibility.'); }
+        });
+        var p = {};
+        $('#ancForm').find('input, select, textarea').each(function() {
+            var id = $(this).attr('id');
+            if (id) p[id] = $(this).val();
+        });
+        p.screening_id = activeId;
+        $.ajax({
+            url: '/api/submit/anc',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(p),
+            success: function() {
+                alert('ANC changes saved.');
+                loadAncData();
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEMRI-CGHR – Create Account</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(145deg, #0b1a2e 0%, #1a2f44 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .card h3 { font-weight: 700; color: #0b1a2e; }
+        .card p { color: #5a7a9a; font-size: 0.9rem; }
+        .form-control {
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            border: 1px solid #d8e2ed;
+        }
+        .form-control:focus {
+            border-color: #3b9eff;
+            box-shadow: 0 0 0 3px rgba(59,158,255,0.15);
+        }
+        .btn-primary {
+            background: #3b9eff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.75rem;
+        }
+        .btn-primary:hover { background: #2a7fd4; }
+        .auth-links { margin-top: 1rem; font-size: 0.9rem; }
+        .auth-links a { color: #3b9eff; text-decoration: none; }
+        .auth-links a:hover { text-decoration: underline; }
+        .alert { border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="text-center mb-4">
+            <h3><i class="fa fa-user-plus me-2"></i>Create Account</h3>
+            <p class="text-muted">Sign up as a Field Technician</p>
+        </div>
+        <div id="regMessage"></div>
+        <form id="registerForm">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Username</label>
+                <input type="text" id="username" class="form-control" required placeholder="Choose a username">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Full Name</label>
+                <input type="text" id="full_name" class="form-control" required placeholder="e.g., Jane Otieno">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Email Address</label>
+                <input type="email" id="email" class="form-control" required placeholder="you@example.com">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Password</label>
+                <input type="password" id="password" class="form-control" required placeholder="Min 8 characters">
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Register</button>
+        </form>
+        <div class="auth-links text-center">
+            <a href="/login">Already have an account? Log in</a>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script>
+        $('#registerForm').submit(function(e) {
+            e.preventDefault();
+            $('#regMessage').empty();
+            var data = {
+                username: $('#username').val(),
+                full_name: $('#full_name').val(),
+                email: $('#email').val(),
+                password: $('#password').val()
+            };
+            $.ajax({
+                url: '/api/register',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    $('#regMessage').html('<div class="alert alert-success">' + res.message + ' <a href="/login">Go to Login</a></div>');
+                    $('#registerForm')[0].reset();
+                },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON ? xhr.responseJSON.message : 'Registration failed';
+                    $('#regMessage').html('<div class="alert alert-danger">' + msg + '</div>');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

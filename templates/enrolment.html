@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-user-plus text-success me-2"></i>Form 2: Enrolment</h3>
+        <span class="badge-modern">
+            {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                <span id="modeIndicator">View Mode</span>
+            {% else %}
+                <i class="fa fa-eye"></i> View‑Only
+            {% endif %}
+        </span>
+    </div>
+    <form id="enrolmentForm" autocomplete="off">
+        <!-- ALL FIELDS (same as before) -->
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Screening ID</label>
+                <input type="text" id="screening_id" class="form-control font-monospace fw-bold" readonly required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Facility</label>
+                <input type="text" id="facility" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Maternal DOB</label>
+                <input type="date" id="dob" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Age (Years)</label>
+                <input type="number" id="age_years" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Age (Months)</label>
+                <input type="number" id="age_months" class="form-control bg-light" readonly required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Marital Status</label>
+                <select id="marital_status" class="form-select edit-field" required>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Separated/Divorced">Separated/Divorced</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Spouse / Partner Name</label>
+                <input type="text" id="husband_name" class="form-control edit-field">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Village</label>
+                <input type="text" id="village" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Education</label>
+                <select id="education" class="form-select edit-field" required>
+                    <option value="None">None</option>
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Tertiary/College">Tertiary/College</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Occupation</label>
+                <select id="occupation" class="form-select edit-field" required>
+                    <option value="Salaried Employed">Salaried Employed</option>
+                    <option value="Self Employed Trader">Self Employed Trader</option>
+                    <option value="Housewife">Housewife</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">If Other, specify</label>
+                <input type="text" id="occupation_other" class="form-control edit-field">
+            </div>
+            <hr class="my-4">
+            <div class="col-md-2">
+                <label class="form-label">Height (cm)</label>
+                <input type="number" step="0.1" id="height" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" step="0.1" id="weight" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Temp (°C)</label>
+                <input type="number" step="0.1" id="temperature" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Temp Route</label>
+                <input type="text" id="temp_method" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Resp Rate</label>
+                <input type="number" id="resp_rate" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Pulse Rate</label>
+                <input type="number" id="pulse_rate" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Systolic</label>
+                <input type="number" id="bp_systolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">BP Diastolic</label>
+                <input type="number" id="bp_diastolic" class="form-control edit-field" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-primary">Estimated GA by Ultrasound (weeks)</label>
+                <input type="number" step="0.1" id="estimated_ga_us" class="form-control edit-field" required>
+            </div>
+        </div>
+        <div class="mt-4 p-3 bg-light border border-warning rounded d-none" id="auditReasonBlock">
+            <label class="form-label text-warning fw-bold">Modification Reason</label>
+            <input type="text" id="change_reason" class="form-control" placeholder="e.g., Updated marital status">
+        </div>
+        <div class="d-flex justify-content-between mt-5 pt-3 border-top">
+            <div>
+                <a href="/form/screening" class="btn btn-outline-secondary fw-bold"><i class="fa fa-chevron-left"></i> Back</a>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="button" id="toggleEditBtn" class="btn btn-outline-primary ms-2"><i class="fa fa-pen"></i> Edit</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary ms-2 d-none"><i class="fa fa-times"></i> Cancel</button>
+                {% endif %}
+            </div>
+            <div>
+                {% if session.get('user', {}).get('role') in ['Super Admin', 'Data Manager'] %}
+                    <button type="submit" id="saveBtn" class="btn btn-success px-4 fw-bold" disabled>Save Changes</button>
+                {% else %}
+                    <span class="bg-light border rounded px-4 py-2 text-muted"><i class="fa fa-eye"></i> View‑only</span>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- AUDIT LOG SECTION -->
+    <div class="mt-5 pt-3 border-top">
+        <h5 class="fw-bold text-secondary"><i class="fa fa-history me-2"></i>Edit History</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover small">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Changes</th>
+                        <th>Reason</th>
+                        <th>User</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="enrolmentAuditLogs">
+                    <tr><td colspan="6" class="text-muted">Loading audit logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var isEditMode = false;
+
+    function setEditMode(enable) {
+        isEditMode = enable;
+        var editFields = $('.edit-field');
+        var saveBtn = $('#saveBtn');
+        var toggleBtn = $('#toggleEditBtn');
+        var cancelBtn = $('#cancelEditBtn');
+        var modeIndicator = $('#modeIndicator');
+
+        if (enable) {
+            editFields.prop('readonly', false).prop('disabled', false);
+            editFields.filter('select').prop('disabled', false);
+            saveBtn.prop('disabled', false);
+            modeIndicator.text('Edit Mode').css('color', 'orange');
+            toggleBtn.html('<i class="fa fa-eye"></i> View');
+            cancelBtn.removeClass('d-none');
+        } else {
+            editFields.prop('readonly', true).prop('disabled', true);
+            editFields.filter('select').prop('disabled', true);
+            saveBtn.prop('disabled', true);
+            modeIndicator.text('View Mode').css('color', '');
+            toggleBtn.html('<i class="fa fa-pen"></i> Edit');
+            cancelBtn.addClass('d-none');
+        }
+    }
+
+    $('#toggleEditBtn').click(function() {
+        if (isEditMode) {
+            if (confirm('Exit edit mode? Unsaved changes will be lost.')) {
+                loadEnrolmentData();
+                setEditMode(false);
+            }
+        } else {
+            setEditMode(true);
+        }
+    });
+
+    $('#cancelEditBtn').click(function() {
+        if (confirm('Cancel editing? Unsaved changes will be lost.')) {
+            loadEnrolmentData();
+            setEditMode(false);
+        }
+    });
+
+    function clearEnrolmentForm() {
+        $('#enrolmentForm')[0].reset();
+        $('#screening_id').val('');
+        $('#facility').val('');
+        $('#dob').val('');
+        $('#age_years').val('');
+        $('#age_months').val('');
+        $('#height').val('');
+        $('#weight').val('');
+        $('#temperature').val('');
+        $('#temp_method').val('');
+        $('#resp_rate').val('');
+        $('#pulse_rate').val('');
+        $('#bp_systolic').val('');
+        $('#bp_diastolic').val('');
+        $('#estimated_ga_us').val('');
+        $('#auditReasonBlock').addClass('d-none');
+        $('#change_reason').val('');
+        localStorage.removeItem('cached_height');
+        setEditMode(false);
+    }
+
+    function loadEnrolmentData() {
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { clearEnrolmentForm(); return; }
+
+        $.getJSON('/api/lookup/screening/' + activeId, function(sres) {
+            if (sres.success && sres.data) {
+                var sd = sres.data;
+                if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                    sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                    alert('⚠️ This participant is NOT eligible. Please correct the Screening form first.');
+                    window.location.href = '/form/screening';
+                    return;
+                }
+                $('#screening_id').val(sd.screening_id);
+                $('#facility').val(sd.facility);
+                $('#dob').val(sd.dob);
+                $('#age_years').val(sd.age_years);
+                $('#age_months').val(sd.age_months);
+                $('#height').val(sd.height);
+                $('#weight').val(sd.weight);
+                $('#temperature').val(sd.temperature);
+                $('#temp_method').val(sd.temp_method);
+                $('#resp_rate').val(sd.resp_rate);
+                $('#pulse_rate').val(sd.pulse_rate);
+                $('#bp_systolic').val(sd.bp_systolic);
+                $('#bp_diastolic').val(sd.bp_diastolic);
+                localStorage.setItem('cached_height', sd.height);
+                if (sd.lmp) {
+                    $.ajax({
+                        url: '/api/calculate_ga',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({lmp: sd.lmp}),
+                        success: function(gares) {
+                            if (gares.success) $('#estimated_ga_us').val(gares.ga_weeks);
+                        }
+                    });
+                }
+                $.getJSON('/api/fetch/enrolment/' + activeId, function(eres) {
+                    if (eres.success && eres.data) {
+                        var ed = eres.data;
+                        $('#marital_status').val(ed.marital_status);
+                        $('#husband_name').val(ed.husband_name);
+                        $('#village').val(ed.village);
+                        $('#education').val(ed.education);
+                        $('#occupation').val(ed.occupation);
+                        $('#occupation_other').val(ed.occupation_other);
+                        if (ed.estimated_ga_us) $('#estimated_ga_us').val(ed.estimated_ga_us);
+                    }
+                }).fail(function() {});
+                $('#auditReasonBlock').removeClass('d-none');
+                loadAuditLogs(activeId, '#enrolmentAuditLogs');
+                setEditMode(false);
+            } else {
+                alert('Screening record not found.');
+                localStorage.removeItem('cached_screening_id');
+                window.location.href = '/form/screening';
+            }
+        }).fail(function() {
+            alert('Error loading screening data.');
+            localStorage.removeItem('cached_screening_id');
+            window.location.href = '/form/screening';
+        });
+    }
+
+    $(document).ready(function() {
+        clearEnrolmentForm();
+        loadEnrolmentData();
+    });
+
+    $('#enrolmentForm').submit(function(e) {
+        e.preventDefault();
+        var activeId = localStorage.getItem('cached_screening_id');
+        if (!activeId) { alert('No active screening session.'); window.location.href = '/form/screening'; return; }
+        $.ajax({
+            url: '/api/lookup/screening/' + activeId,
+            type: 'GET',
+            async: false,
+            success: function(res) {
+                if (res.success && res.data) {
+                    var sd = res.data;
+                    if (sd.eligibility !== 'Yes' || sd.consent !== 'Yes' ||
+                        sd.exc_multiple === 'Yes' || sd.exc_fistula === 'Yes' || sd.exc_mental === 'Yes') {
+                        alert('⚠️ Cannot save Enrolment – participant is NOT eligible.');
+                        window.location.href = '/form/screening';
+                        return;
+                    }
+                }
+            },
+            error: function() { alert('Error verifying eligibility.'); }
+        });
+        var p = {};
+        $('#enrolmentForm').find('input, select').each(function() {
+            var id = $(this).attr('id');
+            if (id) p[id] = $(this).val();
+        });
+        p.screening_id = activeId;
+        $.ajax({
+            url: '/api/submit/enrolment',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(p),
+            success: function() {
+                alert('Enrolment changes saved.');
+                loadEnrolmentData(); // reload and stay on page
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Server error'));
+            }
+        });
+    });
+</script>
+{% endblock %}

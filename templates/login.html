@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEMRI-CGHR Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(145deg, #0b1a2e 0%, #1a2f44 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .login-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .login-card h3 { font-weight: 700; color: #0b1a2e; }
+        .login-card p { color: #5a7a9a; font-size: 0.9rem; }
+        .form-control { border-radius: 12px; padding: 0.7rem 1rem; border: 1px solid #d8e2ed; }
+        .form-control:focus { border-color: #3b9eff; box-shadow: 0 0 0 3px rgba(59,158,255,0.15); }
+        .btn-primary { background: #3b9eff; border: none; border-radius: 12px; font-weight: 600; padding: 0.75rem; transition: 0.2s; }
+        .btn-primary:hover { background: #2a7fd4; }
+        .auth-links { display: flex; justify-content: space-between; margin-top: 1rem; font-size: 0.9rem; }
+        .auth-links a { color: #3b9eff; text-decoration: none; }
+        .auth-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <h3><i class="fa fa-dna me-2"></i>KEMRI‑CGHR</h3>
+            <p class="text-muted">Influenza Surveillance – Secure Access</p>
+        </div>
+        <div id="errBox" class="alert alert-danger d-none small fw-medium"></div>
+        <form id="loginForm">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Username</label>
+                <input type="text" id="username" class="form-control" required autocomplete="username">
+            </div>
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-secondary">Password</label>
+                <input type="password" id="password" class="form-control" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Log In</button>
+        </form>
+        <div class="auth-links">
+            <a href="/register">Create Account</a>
+            <a href="/forgot-password">Forgot Password?</a>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script>
+        $('#loginForm').submit(function(e) {
+            e.preventDefault();
+            $('#errBox').addClass('d-none');
+            $.ajax({
+                url: '/api/login',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ username: $('#username').val(), password: $('#password').val() }),
+                success: function() { window.location.href = '/'; },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON ? xhr.responseJSON.message : 'Login failed';
+                    $('#errBox').removeClass('d-none').text(msg);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

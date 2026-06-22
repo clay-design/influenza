@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card-modern p-4">
+    <div class="page-header">
+        <h3><i class="fa fa-th-large me-2"></i>Dashboard</h3>
+        <span class="badge-modern">Welcome, {{ session['user']['username'] }}</span>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="p-3 bg-light border-start border-primary border-4 rounded">
+                <h6 class="text-uppercase text-muted small fw-bold">Active Session</h6>
+                <h4 id="lblSession" class="font-monospace text-primary mt-2">None</h4>
+                <small class="text-muted">Used across forms</small>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="p-3 bg-light border rounded">
+                <h6>Set/Change Working Subject ID</h6>
+                <div class="input-group mt-2">
+                    <input type="text" id="txtSessionId" class="form-control font-monospace" placeholder="e.g., BND-2026-0001">
+                    <button class="btn btn-dark fw-bold" onclick="setSessionAnchor()">Bind</button>
+                    <button class="btn btn-outline-danger" onclick="clearSession()">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <h5 class="fw-bold text-secondary"><i class="fa fa-search me-2"></i>Search Participants</h5>
+        <div class="input-group mb-3">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search by ID, facility, or DOB...">
+            <button class="btn btn-primary" onclick="performSearch()">Search</button>
+        </div>
+        <div id="searchResults"></div>
+    </div>
+</div>
+<script>
+    $(document).ready(function() {
+        var active = localStorage.getItem('cached_screening_id');
+        if (active) { $('#lblSession').text(active); $('#txtSessionId').val(active); }
+    });
+    function setSessionAnchor() {
+        var val = $('#txtSessionId').val().trim();
+        if (!val) return alert('Enter a valid ID');
+        localStorage.setItem('cached_screening_id', val);
+        $('#lblSession').text(val);
+        alert('Session updated.');
+    }
+    function clearSession() {
+        localStorage.removeItem('cached_screening_id');
+        localStorage.removeItem('cached_height');
+        $('#lblSession').text('None');
+        $('#txtSessionId').val('');
+        alert('Session cleared.');
+    }
+    function performSearch() {
+        var q = $('#searchInput').val().trim();
+        if (!q) { $('#searchResults').html('<div class="alert alert-warning">Enter a search term.</div>'); return; }
+        $.getJSON('/api/search?q=' + encodeURIComponent(q), function(data) {
+            if (data.length === 0) { $('#searchResults').html('<div class="alert alert-info">No records.</div>'); return; }
+            var html = '<div class="table-responsive"><table class="table table-striped table-hover small"><thead><tr><th>ID</th><th>Facility</th><th>DOB</th><th>Age</th><th>Eligible</th><th>Consent</th><th>User</th><th>Date</th></tr></thead><tbody>';
+            data.forEach(function(r) {
+                html += '<tr><td><a href="#" onclick="setSessionFromSearch(\''+r.screening_id+'\')" class="fw-bold">'+r.screening_id+'</a></td><td>'+r.facility+'</td><td>'+r.dob+'</td><td>'+r.age_years+'y '+r.age_months+'m</td><td>'+r.eligibility+'</td><td>'+r.consent+'</td><td>'+r.user_initials+'</td><td>'+r.timestamp+'</td></tr>';
+            });
+            html += '</tbody></table></div>';
+            $('#searchResults').html(html);
+        });
+    }
+    function setSessionFromSearch(id) {
+        localStorage.setItem('cached_screening_id', id);
+        $('#lblSession').text(id);
+        $('#txtSessionId').val(id);
+        alert('Session set to ' + id);
+    }
+    $('#searchInput').keypress(function(e) { if (e.which === 13) performSearch(); });
+</script>
+{% endblock %}
