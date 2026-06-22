@@ -12,6 +12,7 @@
         </span>
     </div>
     <form id="screeningForm" autocomplete="off">
+        <!-- ALL FIELDS (unchanged) – keep your existing field markup -->
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Facility</label>
@@ -182,8 +183,14 @@
 </div>
 
 <script>
+    // --------------------------------------------
+    // 1. GLOBAL VARIABLES
+    // --------------------------------------------
     var isEditMode = false;
 
+    // --------------------------------------------
+    // 2. SILENT RESET (NO POPUPS)
+    // --------------------------------------------
     function resetScreeningForm() {
         $('#screeningForm')[0].reset();
         $('#screening_id').val('');
@@ -192,14 +199,18 @@
         $('#lmp').val('');
         $('#fundal_height').val('');
         $('input[type="checkbox"]').prop('checked', false);
+        $('#facility').val('');
         $('#date_interview').val(new Date().toISOString().substring(0,10));
         $('#auditReasonBlock').addClass('d-none');
         $('#change_reason').val('');
         localStorage.removeItem('cached_height');
         localStorage.removeItem('cached_screening_id');
-        setEditMode(true); // new participant → Edit Mode
+        setEditMode(true); // new → edit mode
     }
 
+    // --------------------------------------------
+    // 3. CLEAR BUTTON (WITH CONFIRM)
+    // --------------------------------------------
     function clearScreeningForm() {
         if (!confirm('Clear all data? This will reset the form completely.')) {
             return;
@@ -209,6 +220,9 @@
         alert('Form cleared.');
     }
 
+    // --------------------------------------------
+    // 4. EDIT MODE TOGGLE
+    // --------------------------------------------
     function setEditMode(enable) {
         isEditMode = enable;
         var editFields = $('.edit-field');
@@ -236,12 +250,36 @@
         }
     }
 
+    // --------------------------------------------
+    // 5. ELIGIBILITY CHECK
+    // --------------------------------------------
+    function checkEligibility() {
+        var exclusionChecked = $('#exc_multiple').is(':checked') ||
+                              $('#exc_fistula').is(':checked') ||
+                              $('#exc_mental').is(':checked');
+        var eligibilityVal = $('#eligibility').val();
+        var consentVal = $('#consent').val();
+        var isEligible = (eligibilityVal === 'Yes') &&
+                         (consentVal === 'Yes') &&
+                         (!exclusionChecked);
+        if (!isEligible) {
+            $('#ineligibilityWarning').removeClass('d-none');
+            $('#saveBtn').prop('disabled', true).addClass('btn-secondary').removeClass('btn-primary');
+        } else {
+            $('#ineligibilityWarning').addClass('d-none');
+            $('#saveBtn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
+        }
+    }
+
+    // --------------------------------------------
+    // 6. LOAD DATA
+    // --------------------------------------------
     function loadScreeningData() {
         var activeId = localStorage.getItem('cached_screening_id');
 
         if (!activeId) {
-            resetScreeningForm();   
-            setEditMode(true);      
+            resetScreeningForm();
+            setEditMode(true);
             return;
         }
 
@@ -277,40 +315,24 @@
                 $('#exc_mental').prop('checked', d.exc_mental === 'Yes');
                 localStorage.setItem('cached_height', d.height);
                 checkEligibility();
+                $('#auditReasonBlock').removeClass('d-none');
                 loadAuditLogs(activeId, '#screeningAuditLogs');
-                setEditMode(false); // existing → View Mode
+                setEditMode(false);
             } else {
-                // ID exists in localStorage but not in DB → invalid
                 localStorage.removeItem('cached_screening_id');
                 resetScreeningForm();
                 setEditMode(true);
             }
         }).fail(function() {
-            // API error – clear and start fresh
             localStorage.removeItem('cached_screening_id');
             resetScreeningForm();
             setEditMode(true);
         });
     }
--
-    function checkEligibility() {
-        var exclusionChecked = $('#exc_multiple').is(':checked') ||
-                              $('#exc_fistula').is(':checked') ||
-                              $('#exc_mental').is(':checked');
-        var eligibilityVal = $('#eligibility').val();
-        var consentVal = $('#consent').val();
-        var isEligible = (eligibilityVal === 'Yes') &&
-                         (consentVal === 'Yes') &&
-                         (!exclusionChecked);
-        if (!isEligible) {
-            $('#ineligibilityWarning').removeClass('d-none');
-            $('#saveBtn').prop('disabled', true).addClass('btn-secondary').removeClass('btn-primary');
-        } else {
-            $('#ineligibilityWarning').addClass('d-none');
-            $('#saveBtn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
-        }
-    }
 
+    // --------------------------------------------
+    // 7. GENERATE SCREENING ID
+    // --------------------------------------------
     function generateScreeningId(facility) {
         if (!facility) { $('#screening_id').val(''); return; }
         $.getJSON('/api/generate_id?facility=' + facility, function(r) {
@@ -319,6 +341,9 @@
         }).fail(function() { alert('Server error – cannot generate ID.'); });
     }
 
+    // --------------------------------------------
+    // 8. EVENT HANDLERS
+    // --------------------------------------------
     $('#date_interview').val(new Date().toISOString().substring(0,10));
 
     $('#toggleEditBtn').click(function() {
@@ -363,7 +388,9 @@
         $('#age_months').val(totalMonths % 12);
     });
 
-    $(document).on('change', 'input[type="checkbox"], #eligibility, #consent', checkEligibility);
+    $(document).on('change', 'input[type="checkbox"], #eligibility, #consent', function() {
+        checkEligibility();
+    });
 
     $(document).ready(function() {
         loadScreeningData();
@@ -371,8 +398,13 @@
         if (facility) generateScreeningId(facility);
     });
 
+    // --------------------------------------------
+    // 9. SUBMIT HANDLER
+    // --------------------------------------------
     $('#screeningForm').submit(function(e) {
         e.preventDefault();
+
+        // Double-check eligibility
         var exclusionChecked = $('#exc_multiple').is(':checked') ||
                               $('#exc_fistula').is(':checked') ||
                               $('#exc_mental').is(':checked');
@@ -380,6 +412,7 @@
             alert('Cannot save – participant is not eligible. Please ensure:\n- Eligibility = Yes\n- Consent = Yes\n- No exclusion criteria checked');
             return;
         }
+
         var p = {};
         $('#screeningForm').find('input, select').each(function() {
             var id = $(this).attr('id');
@@ -391,9 +424,11 @@
                 }
             }
         });
+
         var sid = $('#screening_id').val();
         if (!sid) { alert('Screening ID is required.'); return; }
         localStorage.setItem('cached_screening_id', sid);
+
         $.ajax({
             url: '/api/submit/screening',
             type: 'POST',
