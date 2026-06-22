@@ -3,9 +3,9 @@ load_dotenv()
 
 import os
 import logging
-from flask import Flask, session, request
+from flask import Flask, session, request, g
 from config import Config
-from models import init_db
+from models import init_db, get_db
 import datetime
 
 def create_app():
@@ -15,7 +15,30 @@ def create_app():
     logging.basicConfig(level=logging.INFO)
     app.logger.setLevel(logging.INFO)
 
+    # Explicitly initialize the database on startup (just in case)
     init_db(app)
+
+    # -------------------- Auto‑init on first request --------------------
+    @app.before_request
+    def ensure_db():
+        # Skip static files and the init‑db route itself to avoid recursion
+        if request.endpoint in ('static', 'init_db_route'):
+            return
+        try:
+            db = get_db()
+            cursor = db.cursor()
+            # Try a simple query to check if the users table exists
+            if Config.DB_TYPE == 'postgresql':
+                cursor.execute("SELECT 1 FROM users LIMIT 1")
+            else:
+                cursor.execute("SELECT 1 FROM users LIMIT 1")
+        except Exception:
+            # Table does not exist – initialize the database
+            app.logger.info("Database tables missing – initializing...")
+            init_db(app)
+            app.logger.info("Database initialized successfully!")
+
+    # ---------------------------------------------------------------------
 
     @app.before_request
     def refresh_session():
@@ -35,8 +58,10 @@ def create_app():
 
     return app
 
+# Create the Flask app instance
 app = create_app()
 
+# -------------------- Fallback initialisation route --------------------
 @app.route('/init-db')
 def init_db_route():
     try:
@@ -44,6 +69,8 @@ def init_db_route():
         return "✅ Database initialized successfully! Tables created."
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
+# ---------------------------------------------------------------------
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
