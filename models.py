@@ -13,7 +13,6 @@ def get_db():
         if Config.DB_TYPE == 'postgresql':
             import psycopg
             import psycopg.rows
-            # Use dict row factory for named columns
             g.db = psycopg.connect(Config.DB_PATH, row_factory=psycopg.rows.dict_row)
             g.db.autocommit = False
         else:
@@ -195,22 +194,25 @@ def init_db(app):
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )''')
 
+        cursor.execute("SELECT COUNT(*) AS cnt FROM users")
+        row = cursor.fetchone()
         if Config.DB_TYPE == 'postgresql':
-            cursor.execute("SELECT COUNT(*) FROM users")
-            count = cursor.fetchone()[0]
-            if count == 0:
+            count = row['cnt']
+        else:
+            count = row[0]
+
+        if count == 0:
+            if Config.DB_TYPE == 'postgresql':
                 cursor.execute(
                     "INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES (%s, %s, %s, %s, %s, %s)",
                     ('admin', generate_password_hash('SuperAdmin@2026'), 'System Super Admin', 'SA', 'admin@kemri.go.ke', 'Super Admin')
                 )
-        else:
-            cursor.execute('SELECT COUNT(*) FROM users')
-            if cursor.fetchone()[0] == 0:
+            else:
                 cursor.execute(
                     'INSERT INTO users (username, password_hash, full_name, initials, email, role) VALUES (?, ?, ?, ?, ?, ?)',
                     ('admin', generate_password_hash('SuperAdmin@2026'), 'System Super Admin', 'SA', 'admin@kemri.go.ke', 'Super Admin')
                 )
-                
+
         for facility in Config.FACILITY_PREFIXES:
             if Config.DB_TYPE == 'postgresql':
                 cursor.execute("INSERT INTO id_counters (facility, last_number) VALUES (%s, 0) ON CONFLICT (facility) DO NOTHING", (facility,))
