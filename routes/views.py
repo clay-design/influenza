@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session, abort, request, jsonify
-from models import get_db
+from models import get_db, ph  
 
 views_bp = Blueprint('views', __name__)
 
@@ -44,14 +44,18 @@ def search_participants():
     q = request.args.get('q', '').strip()
     if not q:
         return jsonify([])
+
     db = get_db()
-    rows = db.execute(
-        '''SELECT screening_id, facility, dob, age_years, age_months, eligibility, consent,
+    cursor = db.cursor() 
+
+    cursor.execute(
+        f'''SELECT screening_id, facility, dob, age_years, age_months, eligibility, consent,
                   user_initials, timestamp
            FROM screening
-           WHERE screening_id LIKE ? OR facility LIKE ? OR dob LIKE ?
+           WHERE screening_id LIKE {ph()} OR facility LIKE {ph()} OR dob LIKE {ph()}
            ORDER BY timestamp DESC
            LIMIT 50''',
         (f'%{q}%', f'%{q}%', f'%{q}%')
-    ).fetchall()
+    )
+    rows = cursor.fetchall()
     return jsonify([dict(r) for r in rows])
