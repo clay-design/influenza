@@ -87,50 +87,93 @@ def submit_screening():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        if not old:
+        if action == 'CREATE':
             cursor.execute(f"UPDATE id_counters SET last_number = last_number + 1 WHERE facility = {ph()}", (facility,))
-
-        cursor.execute(
-            f"""INSERT OR REPLACE INTO screening
-               (screening_id, date_interview, facility, dob, age_years, age_months,
-                height, weight, temperature, temp_method, resp_rate, pulse_rate,
-                bp_systolic, bp_diastolic, lmp, fundal_height,
-                inc_resident, inc_pregnancy, inc_gestation, inc_hiv, inc_delivery,
-                exc_multiple, exc_fistula, exc_mental,
-                eligibility, consent, consent_reason, user_initials, timestamp)
-               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
-            (
-                sid,
-                data.get('date_interview'),
-                facility,
-                data.get('dob'),
-                int(data.get('age_years', 0)),
-                int(data.get('age_months', 0)),
-                float(data.get('height', 0)),
-                float(data.get('weight', 0)),
-                float(data.get('temperature', 0)),
-                data.get('temp_method'),
-                int(data.get('resp_rate', 0)),
-                int(data.get('pulse_rate', 0)),
-                int(data.get('bp_systolic', 0)),
-                int(data.get('bp_diastolic', 0)),
-                data.get('lmp'),
-                float(data.get('fundal_height', 0)),
-                data.get('inc_resident'),
-                data.get('inc_pregnancy'),
-                data.get('inc_gestation'),
-                data.get('inc_hiv'),
-                data.get('inc_delivery'),
-                data.get('exc_multiple'),
-                data.get('exc_fistula'),
-                data.get('exc_mental'),
-                data.get('eligibility'),
-                data.get('consent'),
-                data.get('consent_reason'),
-                session['user']['initials'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute(
+                f"""INSERT INTO screening
+                   (screening_id, date_interview, facility, dob, age_years, age_months,
+                    height, weight, temperature, temp_method, resp_rate, pulse_rate,
+                    bp_systolic, bp_diastolic, lmp, fundal_height,
+                    inc_resident, inc_pregnancy, inc_gestation, inc_hiv, inc_delivery,
+                    exc_multiple, exc_fistula, exc_mental,
+                    eligibility, consent, consent_reason, user_initials, timestamp)
+                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
+                (
+                    sid,
+                    data.get('date_interview'),
+                    facility,
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    float(data.get('height', 0)),
+                    float(data.get('weight', 0)),
+                    float(data.get('temperature', 0)),
+                    data.get('temp_method'),
+                    int(data.get('resp_rate', 0)),
+                    int(data.get('pulse_rate', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    data.get('lmp'),
+                    float(data.get('fundal_height', 0)),
+                    data.get('inc_resident'),
+                    data.get('inc_pregnancy'),
+                    data.get('inc_gestation'),
+                    data.get('inc_hiv'),
+                    data.get('inc_delivery'),
+                    data.get('exc_multiple'),
+                    data.get('exc_fistula'),
+                    data.get('exc_mental'),
+                    data.get('eligibility'),
+                    data.get('consent'),
+                    data.get('consent_reason'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
             )
-        )
+        else:
+            cursor.execute(
+                f"""UPDATE screening SET
+                    date_interview={ph()}, facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
+                    height={ph()}, weight={ph()}, temperature={ph()}, temp_method={ph()},
+                    resp_rate={ph()}, pulse_rate={ph()}, bp_systolic={ph()}, bp_diastolic={ph()},
+                    lmp={ph()}, fundal_height={ph()},
+                    inc_resident={ph()}, inc_pregnancy={ph()}, inc_gestation={ph()}, inc_hiv={ph()}, inc_delivery={ph()},
+                    exc_multiple={ph()}, exc_fistula={ph()}, exc_mental={ph()},
+                    eligibility={ph()}, consent={ph()}, consent_reason={ph()},
+                    user_initials={ph()}, timestamp={ph()}
+                    WHERE screening_id={ph()}""",
+                (
+                    data.get('date_interview'),
+                    facility,
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    float(data.get('height', 0)),
+                    float(data.get('weight', 0)),
+                    float(data.get('temperature', 0)),
+                    data.get('temp_method'),
+                    int(data.get('resp_rate', 0)),
+                    int(data.get('pulse_rate', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    data.get('lmp'),
+                    float(data.get('fundal_height', 0)),
+                    data.get('inc_resident'),
+                    data.get('inc_pregnancy'),
+                    data.get('inc_gestation'),
+                    data.get('inc_hiv'),
+                    data.get('inc_delivery'),
+                    data.get('exc_multiple'),
+                    data.get('exc_fistula'),
+                    data.get('exc_mental'),
+                    data.get('eligibility'),
+                    data.get('consent'),
+                    data.get('consent_reason'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    sid
+                )
+            )
         audit_log('screening', sid, action, old, data, data.get('change_reason'), session['user']['initials'])
         db.commit()
         return jsonify({'success': True})
@@ -171,38 +214,74 @@ def submit_enrolment():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        cursor.execute(
-            f"""INSERT OR REPLACE INTO enrolment
-               (screening_id, facility, dob, age_years, age_months,
-                marital_status, husband_name, village, education, occupation, occupation_other,
-                height, weight, temperature, temp_method, resp_rate, pulse_rate,
-                bp_systolic, bp_diastolic, estimated_ga_us, user_initials, timestamp)
-               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
-            (
-                sid,
-                data.get('facility'),
-                data.get('dob'),
-                int(data.get('age_years', 0)),
-                int(data.get('age_months', 0)),
-                data.get('marital_status'),
-                data.get('husband_name'),
-                data.get('village'),
-                data.get('education'),
-                data.get('occupation'),
-                data.get('occupation_other'),
-                float(data.get('height', 0)),
-                float(data.get('weight', 0)),
-                float(data.get('temperature', 0)),
-                data.get('temp_method'),
-                int(data.get('resp_rate', 0)),
-                int(data.get('pulse_rate', 0)),
-                int(data.get('bp_systolic', 0)),
-                int(data.get('bp_diastolic', 0)),
-                float(data.get('estimated_ga_us', 0)),
-                session['user']['initials'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if action == 'CREATE':
+            cursor.execute(
+                f"""INSERT INTO enrolment
+                   (screening_id, facility, dob, age_years, age_months,
+                    marital_status, husband_name, village, education, occupation, occupation_other,
+                    height, weight, temperature, temp_method, resp_rate, pulse_rate,
+                    bp_systolic, bp_diastolic, estimated_ga_us, user_initials, timestamp)
+                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
+                (
+                    sid,
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('marital_status'),
+                    data.get('husband_name'),
+                    data.get('village'),
+                    data.get('education'),
+                    data.get('occupation'),
+                    data.get('occupation_other'),
+                    float(data.get('height', 0)),
+                    float(data.get('weight', 0)),
+                    float(data.get('temperature', 0)),
+                    data.get('temp_method'),
+                    int(data.get('resp_rate', 0)),
+                    int(data.get('pulse_rate', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    float(data.get('estimated_ga_us', 0)),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
             )
-        )
+        else:
+            cursor.execute(
+                f"""UPDATE enrolment SET
+                    facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
+                    marital_status={ph()}, husband_name={ph()}, village={ph()}, education={ph()},
+                    occupation={ph()}, occupation_other={ph()},
+                    height={ph()}, weight={ph()}, temperature={ph()}, temp_method={ph()},
+                    resp_rate={ph()}, pulse_rate={ph()}, bp_systolic={ph()}, bp_diastolic={ph()},
+                    estimated_ga_us={ph()}, user_initials={ph()}, timestamp={ph()}
+                    WHERE screening_id={ph()}""",
+                (
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('marital_status'),
+                    data.get('husband_name'),
+                    data.get('village'),
+                    data.get('education'),
+                    data.get('occupation'),
+                    data.get('occupation_other'),
+                    float(data.get('height', 0)),
+                    float(data.get('weight', 0)),
+                    float(data.get('temperature', 0)),
+                    data.get('temp_method'),
+                    int(data.get('resp_rate', 0)),
+                    int(data.get('pulse_rate', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    float(data.get('estimated_ga_us', 0)),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    sid
+                )
+            )
         audit_log('enrolment', sid, action, old, data, data.get('change_reason'), session['user']['initials'])
         db.commit()
         return jsonify({'success': True})
@@ -383,54 +462,105 @@ def submit_delivery():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        cursor.execute(
-            f"""INSERT OR REPLACE INTO delivery
-               (screening_id, facility, dob, age_years, age_months,
-                date_interview, mother_weight, vital_temp, vital_temp_method,
-                vital_rr, vital_hr, bp_systolic, bp_diastolic, oxygen_sat, oxygen_supp,
-                bmi_calc, abnormal_exam, abnormal_specify,
-                delivery_date, delivery_time, delivery_location, delivery_location_other,
-                delivery_provider, delivery_provider_other, mode_delivery,
-                csection_indication, csection_indication_other,
-                birth_weight_g, infant_sex, infant_status, birth_asphyxia,
-                user_initials, timestamp)
-               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
-            (
-                sid,
-                data.get('facility'),
-                data.get('dob'),
-                int(data.get('age_years', 0)),
-                int(data.get('age_months', 0)),
-                data.get('date_interview'),
-                float(data.get('mother_weight', 0)),
-                float(data.get('vital_temp', 0)),
-                data.get('vital_temp_method'),
-                int(data.get('vital_rr', 0)),
-                int(data.get('vital_hr', 0)),
-                int(data.get('bp_systolic', 0)),
-                int(data.get('bp_diastolic', 0)),
-                int(data.get('oxygen_sat', 0)),
-                data.get('oxygen_supp'),
-                float(data.get('bmi_calc', 0)),
-                data.get('abnormal_exam'),
-                data.get('abnormal_specify'),
-                data.get('delivery_date'),
-                data.get('delivery_time'),
-                data.get('delivery_location'),
-                data.get('delivery_location_other'),
-                data.get('delivery_provider'),
-                data.get('delivery_provider_other'),
-                data.get('mode_delivery'),
-                data.get('csection_indication'),
-                data.get('csection_indication_other'),
-                float(data.get('birth_weight_g', 0)),
-                data.get('infant_sex'),
-                data.get('infant_status'),
-                data.get('birth_asphyxia'),
-                session['user']['initials'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if action == 'CREATE':
+            cursor.execute(
+                f"""INSERT INTO delivery
+                   (screening_id, facility, dob, age_years, age_months,
+                    date_interview, mother_weight, vital_temp, vital_temp_method,
+                    vital_rr, vital_hr, bp_systolic, bp_diastolic, oxygen_sat, oxygen_supp,
+                    bmi_calc, abnormal_exam, abnormal_specify,
+                    delivery_date, delivery_time, delivery_location, delivery_location_other,
+                    delivery_provider, delivery_provider_other, mode_delivery,
+                    csection_indication, csection_indication_other,
+                    birth_weight_g, infant_sex, infant_status, birth_asphyxia,
+                    user_initials, timestamp)
+                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
+                (
+                    sid,
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('date_interview'),
+                    float(data.get('mother_weight', 0)),
+                    float(data.get('vital_temp', 0)),
+                    data.get('vital_temp_method'),
+                    int(data.get('vital_rr', 0)),
+                    int(data.get('vital_hr', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    int(data.get('oxygen_sat', 0)),
+                    data.get('oxygen_supp'),
+                    float(data.get('bmi_calc', 0)),
+                    data.get('abnormal_exam'),
+                    data.get('abnormal_specify'),
+                    data.get('delivery_date'),
+                    data.get('delivery_time'),
+                    data.get('delivery_location'),
+                    data.get('delivery_location_other'),
+                    data.get('delivery_provider'),
+                    data.get('delivery_provider_other'),
+                    data.get('mode_delivery'),
+                    data.get('csection_indication'),
+                    data.get('csection_indication_other'),
+                    float(data.get('birth_weight_g', 0)),
+                    data.get('infant_sex'),
+                    data.get('infant_status'),
+                    data.get('birth_asphyxia'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
             )
-        )
+        else:
+            cursor.execute(
+                f"""UPDATE delivery SET
+                    facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
+                    date_interview={ph()}, mother_weight={ph()}, vital_temp={ph()}, vital_temp_method={ph()},
+                    vital_rr={ph()}, vital_hr={ph()}, bp_systolic={ph()}, bp_diastolic={ph()},
+                    oxygen_sat={ph()}, oxygen_supp={ph()}, bmi_calc={ph()},
+                    abnormal_exam={ph()}, abnormal_specify={ph()},
+                    delivery_date={ph()}, delivery_time={ph()}, delivery_location={ph()}, delivery_location_other={ph()},
+                    delivery_provider={ph()}, delivery_provider_other={ph()}, mode_delivery={ph()},
+                    csection_indication={ph()}, csection_indication_other={ph()},
+                    birth_weight_g={ph()}, infant_sex={ph()}, infant_status={ph()}, birth_asphyxia={ph()},
+                    user_initials={ph()}, timestamp={ph()}
+                    WHERE screening_id={ph()}""",
+                (
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('date_interview'),
+                    float(data.get('mother_weight', 0)),
+                    float(data.get('vital_temp', 0)),
+                    data.get('vital_temp_method'),
+                    int(data.get('vital_rr', 0)),
+                    int(data.get('vital_hr', 0)),
+                    int(data.get('bp_systolic', 0)),
+                    int(data.get('bp_diastolic', 0)),
+                    int(data.get('oxygen_sat', 0)),
+                    data.get('oxygen_supp'),
+                    float(data.get('bmi_calc', 0)),
+                    data.get('abnormal_exam'),
+                    data.get('abnormal_specify'),
+                    data.get('delivery_date'),
+                    data.get('delivery_time'),
+                    data.get('delivery_location'),
+                    data.get('delivery_location_other'),
+                    data.get('delivery_provider'),
+                    data.get('delivery_provider_other'),
+                    data.get('mode_delivery'),
+                    data.get('csection_indication'),
+                    data.get('csection_indication_other'),
+                    float(data.get('birth_weight_g', 0)),
+                    data.get('infant_sex'),
+                    data.get('infant_status'),
+                    data.get('birth_asphyxia'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    sid
+                )
+            )
         audit_log('delivery', sid, action, old, data, data.get('change_reason'), session['user']['initials'])
         db.commit()
         return jsonify({'success': True})
@@ -459,28 +589,52 @@ def submit_closeout():
         return jsonify({'success': False, 'message': 'Change reason is required when editing'}), 400
 
     try:
-        cursor.execute(
-            f"""INSERT OR REPLACE INTO closeout
-               (screening_id, facility, dob, age_years, age_months,
-                date_interview, termination_date, participant_status,
-                discontinuation_reason, discontinuation_specify,
-                user_initials, timestamp)
-               VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
-            (
-                sid,
-                data.get('facility'),
-                data.get('dob'),
-                int(data.get('age_years', 0)),
-                int(data.get('age_months', 0)),
-                data.get('date_interview'),
-                data.get('termination_date'),
-                data.get('participant_status'),
-                data.get('discontinuation_reason'),
-                data.get('discontinuation_specify'),
-                session['user']['initials'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if action == 'CREATE':
+            cursor.execute(
+                f"""INSERT INTO closeout
+                   (screening_id, facility, dob, age_years, age_months,
+                    date_interview, termination_date, participant_status,
+                    discontinuation_reason, discontinuation_specify,
+                    user_initials, timestamp)
+                   VALUES ({ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()},{ph()})""",
+                (
+                    sid,
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('date_interview'),
+                    data.get('termination_date'),
+                    data.get('participant_status'),
+                    data.get('discontinuation_reason'),
+                    data.get('discontinuation_specify'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
             )
-        )
+        else:
+            cursor.execute(
+                f"""UPDATE closeout SET
+                    facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
+                    date_interview={ph()}, termination_date={ph()}, participant_status={ph()},
+                    discontinuation_reason={ph()}, discontinuation_specify={ph()},
+                    user_initials={ph()}, timestamp={ph()}
+                    WHERE screening_id={ph()}""",
+                (
+                    data.get('facility'),
+                    data.get('dob'),
+                    int(data.get('age_years', 0)),
+                    int(data.get('age_months', 0)),
+                    data.get('date_interview'),
+                    data.get('termination_date'),
+                    data.get('participant_status'),
+                    data.get('discontinuation_reason'),
+                    data.get('discontinuation_specify'),
+                    session['user']['initials'],
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    sid
+                )
+            )
         audit_log('closeout', sid, action, old, data, data.get('change_reason'), session['user']['initials'])
         db.commit()
         return jsonify({'success': True})

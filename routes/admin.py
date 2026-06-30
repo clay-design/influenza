@@ -1,13 +1,10 @@
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash
-from models import get_db
+from models import get_db, ph          # import ph from models
 from config import Config
 import sqlite3
 
 admin_bp = Blueprint('admin', __name__)
-
-def ph():
-    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
 
 @admin_bp.route('/users/add', methods=['POST'])
 def add_user():
