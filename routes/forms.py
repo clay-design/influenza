@@ -3,14 +3,11 @@ import logging
 import traceback
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from models import get_db
+from models import get_db, ph         
 from config import Config
 
 forms_bp = Blueprint('forms', __name__)
 logger = logging.getLogger(__name__)
-
-def ph():
-    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
 
 def audit_log(table, record_id, action, old_value, new_value, change_reason, user_initials):
     db = get_db()
@@ -30,7 +27,6 @@ def validate_positive_number(value, field_name):
     if value is not None and isinstance(value, (int, float)) and value < 0:
         raise ValueError(f"{field_name} cannot be negative")
 
-# ---------- GA calculator ----------
 @forms_bp.route('/calculate_ga', methods=['POST'])
 def calculate_ga():
     data = request.get_json() or {}
@@ -47,7 +43,6 @@ def calculate_ga():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400
 
-# ---------- Audit endpoint ----------
 @forms_bp.route('/audit/<screening_id>', methods=['GET'])
 def get_audit_logs(screening_id):
     db = get_db()
@@ -59,7 +54,6 @@ def get_audit_logs(screening_id):
     rows = cursor.fetchall()
     return jsonify([dict(r) for r in rows])
 
-# ---------- Screening ----------
 @forms_bp.route('/submit/screening', methods=['POST'])
 def submit_screening():
     if session['user']['role'] == 'Field Technician':
@@ -77,7 +71,6 @@ def submit_screening():
     old = cursor.fetchone()
     action = 'UPDATE' if old else 'CREATE'
 
-    # Validate numeric fields
     try:
         validate_positive_number(float(data.get('height', 0)), 'Height')
         validate_positive_number(float(data.get('weight', 0)), 'Weight')
@@ -146,7 +139,6 @@ def submit_screening():
         logger.error(f"Screening error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ---------- Enrolment ----------
 @forms_bp.route('/submit/enrolment', methods=['POST'])
 def submit_enrolment():
     if session['user']['role'] == 'Field Technician':
@@ -219,7 +211,6 @@ def submit_enrolment():
         logger.error(f"Enrolment error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ---------- ANC ----------
 @forms_bp.route('/submit/anc', methods=['POST'])
 def submit_anc():
     if session['user']['role'] == 'Field Technician':
@@ -290,7 +281,6 @@ def submit_anc():
                 row = cursor.fetchone()
                 vid = row['id'] if row else None
             else:
-                # SQLite
                 cursor.execute(
                     f"""INSERT INTO anc_visits
                        (screening_id, facility, dob, age_years, age_months,
@@ -322,7 +312,6 @@ def submit_anc():
                 )
                 vid = cursor.lastrowid
         else:
-            # UPDATE
             cursor.execute(
                 f"""UPDATE anc_visits SET
                    screening_id={ph()}, facility={ph()}, dob={ph()}, age_years={ph()}, age_months={ph()},
@@ -361,7 +350,6 @@ def submit_anc():
         logger.error(f"ANC error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ---------- Delivery ----------
 @forms_bp.route('/submit/delivery', methods=['POST'])
 def submit_delivery():
     if session['user']['role'] == 'Field Technician':
@@ -451,7 +439,6 @@ def submit_delivery():
         logger.error(f"Delivery error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ---------- Closeout ----------
 @forms_bp.route('/submit/closeout', methods=['POST'])
 def submit_closeout():
     if session['user']['role'] == 'Field Technician':

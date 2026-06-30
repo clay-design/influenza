@@ -1,15 +1,12 @@
 from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import get_db
+from models import get_db, ph          # <-- added ph import
 from config import Config
 import secrets
 from datetime import datetime, timedelta
 import traceback
 
 auth_bp = Blueprint('auth', __name__)
-
-def ph():
-    return '%s' if Config.DB_TYPE == 'postgresql' else '?'
 
 def generate_initials(full_name):
     parts = full_name.strip().split()

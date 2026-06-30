@@ -14,7 +14,6 @@ def create_app():
     logging.basicConfig(level=logging.INFO)
     app.logger.setLevel(logging.INFO)
 
-    # Force database creation on startup
     with app.app_context():
         init_db(app)
 
